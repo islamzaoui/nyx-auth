@@ -52,8 +52,8 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 			userId,
 			secretHash,
 			createdAt: now,
-			attributes,
 			lastVerifiedAt: now,
+			attributes: this.getSessionAttributes(attributes),
 		});
 		if (insertResult instanceof AdapterError) {
 			return new UnexpectedError({ cause: insertResult });
@@ -63,9 +63,9 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 			id,
 			userId,
 			token,
-			...attributes,
 			createdAt: now,
 			lastVerifiedAt: now,
+			...this.getSessionAttributes(attributes),
 		};
 	}
 
