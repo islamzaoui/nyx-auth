@@ -1,0 +1,36 @@
+{
+	"name": "nyx-auth",
+	"private": true,
+	"scripts": {
+		"prepare": "husky",
+		"dev": "turbo dev",
+		"build": "turbo build",
+		"typecheck": "turbo typecheck",
+		"lint": "biome check",
+		"lint:fix": "biome check --write"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.5.5",
+		"husky": "9.1.7",
+		"lint-staged": "17.1.0",
+		"turbo": "2.10.5"
+	},
+	"peerDependencies": {
+		"typescript": "catalog:"
+	},
+	"workspaces": {
+		"packages": [
+			"shared/**",
+			"packages/**"
+		],
+		"catalog": {
+			"@types/bun": "1.3.13",
+			"bunup": "0.16.32",
+			"typescript": "^5"
+		}
+	},
+	"packageManager": "bun@1.3.13",
+	"lint-staged": {
+		"*": "biome check --fix"
+	}
+}

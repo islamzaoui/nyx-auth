@@ -1,0 +1,13 @@
+{
+	"extends": "@nyx-auth/tsconfig/base",
+	"compilerOptions": {
+		"types": ["bun"],
+		"declaration": true,
+		"isolatedDeclarations": true,
+		"paths": {
+			"@/*": ["./src/*"]
+		}
+	},
+	"include": ["src"],
+	"exclude": ["node_modules", "dist"]
+}

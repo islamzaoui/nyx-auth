@@ -1,0 +1,7 @@
+{
+	"name": "@nyx-auth/tsconfig",
+	"private": true,
+	"exports": {
+		"./base": "./tsconfig.base.json"
+	}
+}
