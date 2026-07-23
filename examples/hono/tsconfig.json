@@ -1,0 +1,8 @@
+{
+	"extends": "@nyx-auth/tsconfig/base",
+	"compilerOptions": {
+		"types": ["bun"],
+		"jsx": "react-jsx",
+		"jsxImportSource": "hono/jsx"
+	}
+}

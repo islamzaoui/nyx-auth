@@ -2,7 +2,7 @@
 import type { RegisteredDatabaseSessionAttributes } from ".";
 import { type Adapter, AdapterError } from "./adapter";
 import { TimeSpan } from "./time-span";
-import type { Session, SessionAttributes, SessionWithToken } from "./types";
+import type { Session, SessionWithToken } from "./types";
 
 export class UnexpectedError extends Error {
 	override readonly name = "UnexpectedError";
@@ -11,12 +11,12 @@ export class UnexpectedError extends Error {
 	}
 }
 
-export interface NyxOptions {
+export interface NyxOptions<_SessionAttributes extends {} = Record<never, never>> {
 	adapter: Adapter;
 	session?: {
 		inactivityTimeout?: TimeSpan;
 		activityCheckInterval?: TimeSpan;
-		getSessionAttributes?: (databaseSessionAttributes: RegisteredDatabaseSessionAttributes) => SessionAttributes;
+		getSessionAttributes?: (databaseSessionAttributes: RegisteredDatabaseSessionAttributes) => _SessionAttributes;
 	};
 }
 
@@ -26,7 +26,7 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 	private readonly activityCheckInterval: TimeSpan;
 	private readonly getSessionAttributes: (databaseSessionAttributes: RegisteredDatabaseSessionAttributes) => _SessionAttributes;
 
-	constructor(options: NyxOptions) {
+	constructor(options: NyxOptions<_SessionAttributes>) {
 		this.adapter = options.adapter;
 		this.inactivityTimeout = options.session?.inactivityTimeout ?? new TimeSpan(10, "d");
 		this.activityCheckInterval = options.session?.activityCheckInterval ?? new TimeSpan(1, "h");
@@ -84,7 +84,14 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 			return null;
 		}
 
-		return session;
+		return {
+			id: session.id,
+			userId: session.userId,
+			secretHash: session.secretHash,
+			createdAt: session.createdAt,
+			lastVerifiedAt: session.lastVerifiedAt,
+			...session.attributes,
+		};
 	}
 
 	async validateSessionToken(token: string): Promise<Session | null | UnexpectedError> {
