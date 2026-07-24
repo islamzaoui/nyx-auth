@@ -1,0 +1,20 @@
+core:changelogs:
+  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: patch\n---\n\n### Initial version\n\nReimplemented the structure of [lucia v3](https://github.com/lucia-auth/lucia/tree/v3) with the functionality of [Inactivity timeout sessions](https://lucia-auth.com/sessions/inactivity-timeout) plus few personal preferences.\n"
+    filename: 2026-07-24-mry6pi6n.md
+    v: 0.0.0
+core:packages:
+  - id: npm:nyx-auth
+    updated: false
+  - id: npm:hono-bun
+    updated: false
+  - id: npm:@nyx-auth/tsconfig
+    updated: false
+  - changelogIds:
+      - 2026-07-24-mry6pi6n.md
+    id: npm:@nyx-auth/core
+    updated: true
+npm:packages:
+  - id: npm:nyx-auth
+  - id: npm:hono-bun
+  - id: npm:@nyx-auth/tsconfig
+  - id: npm:@nyx-auth/core

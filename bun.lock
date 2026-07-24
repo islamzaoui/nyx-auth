@@ -18,7 +18,7 @@
     "examples/hono-bun": {
       "name": "hono-bun",
       "dependencies": {
-        "hono": "^4.12.31",
+        "hono": "4.12.31",
       },
       "devDependencies": {
         "@nyx-auth/core": "workspace:*",
@@ -29,7 +29,7 @@
     },
     "packages/core": {
       "name": "@nyx-auth/core",
-      "version": "0.0.0",
+      "version": "0.0.1",
       "devDependencies": {
         "@nyx-auth/tsconfig": "workspace:*",
         "@types/bun": "catalog:",
