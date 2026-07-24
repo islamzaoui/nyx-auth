@@ -2,7 +2,7 @@
 	"name": "nyx-auth",
 	"private": true,
 	"scripts": {
-		"prepare": "husky",
+		"prepare": "husky || echo ''",
 		"dev": "turbo dev",
 		"build": "turbo build",
 		"typecheck": "turbo typecheck",

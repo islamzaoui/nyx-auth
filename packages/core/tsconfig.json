@@ -1,5 +1,5 @@
 {
-	"extends": "@nyx-auth/tsconfig/base",
+	"extends": "../../shared/tsconfig/tsconfig.base.json",
 	"compilerOptions": {
 		"types": ["bun"],
 		"declaration": true,
