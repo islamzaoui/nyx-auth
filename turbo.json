@@ -12,6 +12,7 @@
 			"outputs": ["dist/**"]
 		},
 		"typecheck": {
+			"dependsOn": ["^typecheck", "build"],
 			"inputs": ["src/**/*.ts"]
 		}
 	},
