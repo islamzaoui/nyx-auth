@@ -11,7 +11,7 @@
 
 ## Examples
 
-**[hono + bun](examples/hono)** - A simple email/password authentication example using Hono and Bun.
+**[hono-bun](examples/hono-bun)** - A simple email/password authentication example using Hono and Bun.
 
 ## Acknowledgements
 

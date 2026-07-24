@@ -1,12 +1,12 @@
 {
-	"name": "hono",
+	"name": "hono-bun",
 	"private": true,
 	"scripts": {
 		"dev": "bun --hot src/index.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"hono": "^4.12.31"
+		"hono": "4.12.31"
 	},
 	"devDependencies": {
 		"@nyx-auth/core": "workspace:*",
