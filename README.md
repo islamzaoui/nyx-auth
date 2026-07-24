@@ -1,15 +1,22 @@
-# nyx-auth
+# Nyx Auth
 
-To install dependencies:
+> [!IMPORTANT]  
+> Nyx currently is just a reimplementation of [lucia](https://github.com/lucia-auth/lucia/tree/v3) with a few personal modifications. The API is not stable and may change in the future. Use at your own risk.
 
-```bash
-bun install
-```
+## Packages
 
-To run:
+| Package                         | Changelog                              |
+| ------------------------------- | -------------------------------------- |
+| [@nyx-auth/core](packages/nyx)  | [Changelog](packages/nyx/CHANGELOG.md) |
 
-```bash
-bun run index.ts
-```
+## Examples
 
-This project was created using `bun init` in bun v1.3.13. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
+**[hono + bun](examples/hono)** - A simple email/password authentication example using Hono and Bun.
+
+## Acknowledgements
+
+- [Pilcrow](https://auth.pilcrowonpaper.com)
+- [Lucia](https://lucia-auth.com/sessions/overview)
+
+## License
+[MIT](./LICENSE)

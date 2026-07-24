@@ -1,9 +1,24 @@
 {
 	"name": "@nyx-auth/core",
-	"version": "0.0.1",
+	"version": "0.0.0",
+	"description": "The core library for nyx-auth. Provides the essential session management functionality",
+	"author": "islamzaoui",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/islamzaoui/nyx-auth",
+		"directory": "packages/core"
+	},
+	"keywords": [
+		"nyx",
+		"nyx-auth",
+		"authentication",
+		"auth"
+	],
 	"type": "module",
 	"files": [
-		"dist"
+		"dist",
+		"CHANGELOG.md"
 	],
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",

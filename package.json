@@ -7,12 +7,14 @@
 		"build": "turbo build",
 		"typecheck": "turbo typecheck",
 		"lint": "biome check",
-		"lint:fix": "biome check --write"
+		"lint:fix": "biome check --write",
+		"tegami": "bun scripts/tegami.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",
 		"husky": "9.1.7",
 		"lint-staged": "17.1.0",
+		"tegami": "1.2.6",
 		"turbo": "2.10.5"
 	},
 	"peerDependencies": {
