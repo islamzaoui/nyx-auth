@@ -1,6 +1,6 @@
 {
 	"name": "@nyx-auth/core",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "The core library for nyx-auth. Provides the essential session management functionality",
 	"author": "islamzaoui",
 	"license": "MIT",
