@@ -1,12 +1,10 @@
-import type { RegisteredDatabaseSessionAttributes } from "@/index";
-
-export interface DatabaseSession {
+export interface DatabaseSession<Attributes extends {} = Record<never, never>> {
 	id: string;
 	userId: string;
 	secretHash: Uint8Array;
 	createdAt: Date;
 	lastVerifiedAt: Date;
-	attributes: RegisteredDatabaseSessionAttributes;
+	attributes: Attributes;
 }
 
 export class AdapterError extends Error {
@@ -18,10 +16,10 @@ export class AdapterError extends Error {
 	}
 }
 
-export interface Adapter {
-	insertSession(session: DatabaseSession): Promise<undefined | AdapterError>;
-	findSessionById(sessionId: string): Promise<DatabaseSession | null | AdapterError>;
-	updateSessionbyId(sessionId: string, session: Partial<Omit<DatabaseSession, "id" | "userId">>): Promise<undefined | AdapterError>;
+export interface Adapter<Attributes extends {} = Record<never, never>> {
+	insertSession(session: DatabaseSession<Attributes>): Promise<undefined | AdapterError>;
+	findSessionById(sessionId: string): Promise<DatabaseSession<Attributes> | null | AdapterError>;
+	updateSessionbyId(sessionId: string, session: Partial<Omit<DatabaseSession<Attributes>, "id" | "userId">>): Promise<undefined | AdapterError>;
 	deleteSessionById(sessionId: string): Promise<undefined | AdapterError>;
 	deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError>;
 }
