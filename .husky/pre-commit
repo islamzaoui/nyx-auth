@@ -2,6 +2,4 @@
 
 set -e
 
-bun install --frozen-lockfile
-bun typecheck
-bun lint
+bun lint-staged

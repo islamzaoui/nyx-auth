@@ -7,7 +7,7 @@
 
 | Package                         | Changelog                              |
 | ------------------------------- | -------------------------------------- |
-| [@nyx-auth/core](packages/nyx)  | [Changelog](packages/nyx/CHANGELOG.md) |
+| [@nyx-auth/core](packages/core)  | [Changelog](packages/core/CHANGELOG.md) |
 
 ## Examples
 
