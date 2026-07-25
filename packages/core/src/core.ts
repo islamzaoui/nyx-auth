@@ -1,5 +1,3 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: module augmentation */
-import type { RegisteredDatabaseSessionAttributes } from ".";
 import { type Adapter, AdapterError } from "./adapter";
 import { TimeSpan } from "./time-span";
 import type { Session, SessionWithToken } from "./types";
@@ -11,34 +9,32 @@ export class UnexpectedError extends Error {
 	}
 }
 
-export interface NyxOptions<_SessionAttributes extends {} = Record<never, never>> {
-	adapter: Adapter;
+export interface NyxOptions<Attributes extends {} = Record<never, never>> {
+	adapter: Adapter<Attributes>;
 	session?: {
 		inactivityTimeout?: TimeSpan;
 		activityCheckInterval?: TimeSpan;
-		getSessionAttributes?: (databaseSessionAttributes: RegisteredDatabaseSessionAttributes) => _SessionAttributes;
+		getSessionAttributes?: (databaseSessionAttributes: Attributes) => Attributes;
 	};
 }
 
-export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
-	private readonly adapter: Adapter;
+export class Nyx<Attributes extends {} = Record<never, never>> {
+	private readonly adapter: Adapter<Attributes>;
 	private readonly inactivityTimeout: TimeSpan;
 	private readonly activityCheckInterval: TimeSpan;
-	private readonly getSessionAttributes: (databaseSessionAttributes: RegisteredDatabaseSessionAttributes) => _SessionAttributes;
+	private readonly getSessionAttributes: (databaseSessionAttributes: Attributes) => Attributes;
 
-	constructor(options: NyxOptions<_SessionAttributes>) {
+	constructor(options: NyxOptions<Attributes>) {
 		this.adapter = options.adapter;
 		this.inactivityTimeout = options.session?.inactivityTimeout ?? new TimeSpan(10, "d");
 		this.activityCheckInterval = options.session?.activityCheckInterval ?? new TimeSpan(1, "h");
-		this.getSessionAttributes = (attr): any => {
+		this.getSessionAttributes = (attr: Attributes): Attributes => {
 			if (options.session?.getSessionAttributes) return options.session.getSessionAttributes(attr);
-			return {};
+			return {} as Attributes;
 		};
 	}
 
-	// ========== Session Management ==========
-
-	async createSession(userId: string, attributes: RegisteredDatabaseSessionAttributes): Promise<SessionWithToken | UnexpectedError> {
+	async createSession(userId: string, attributes: Attributes): Promise<SessionWithToken<Attributes> | UnexpectedError> {
 		const now = new Date();
 
 		const id = this.generateSessionId();
@@ -69,7 +65,7 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 		};
 	}
 
-	async getSession(id: string): Promise<Session | null | UnexpectedError> {
+	async getSession(id: string): Promise<Session<Attributes> | null | UnexpectedError> {
 		const now = new Date();
 
 		const session = await this.adapter.findSessionById(id);
@@ -94,7 +90,7 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 		};
 	}
 
-	async validateSessionToken(token: string): Promise<Session | null | UnexpectedError> {
+	async validateSessionToken(token: string): Promise<Session<Attributes> | null | UnexpectedError> {
 		const now = new Date();
 
 		const tokenParts = token.split(".");
@@ -145,8 +141,6 @@ export class Nyx<_SessionAttributes extends {} = Record<never, never>> {
 		}
 		return undefined;
 	}
-
-	// ========== helpers ==========
 
 	private generateSessionId(): string {
 		const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";

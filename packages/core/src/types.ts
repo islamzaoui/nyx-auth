@@ -1,18 +1,15 @@
-/** biome-ignore-all lint/suspicious/noExplicitAny: module augmentation */
-/** biome-ignore-all lint/complexity/noBannedTypes: module augmentation */
-import type { RegisteredNyx } from ".";
-import type { Nyx } from "./core";
-
-export type SessionAttributes = RegisteredNyx extends Nyx<infer _SessionAttributes> ? _SessionAttributes : {};
-
-export interface Session extends SessionAttributes {
+export type Session<Attributes extends {} = Record<never, never>> = {
 	id: string;
 	userId: string;
 	secretHash: Uint8Array;
 	createdAt: Date;
 	lastVerifiedAt: Date;
-}
+} & Attributes;
 
-export interface SessionWithToken extends Omit<Session, "secretHash"> {
+export type SessionWithToken<Attributes extends {} = Record<never, never>> = {
+	id: string;
+	userId: string;
 	token: string;
-}
+	createdAt: Date;
+	lastVerifiedAt: Date;
+} & Attributes;

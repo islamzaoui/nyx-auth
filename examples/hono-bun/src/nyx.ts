@@ -1,7 +1,11 @@
 import { Nyx } from "@nyx-auth/core";
 import { SqliteAdapter } from "./db/adapter";
 
-export const nyx = new Nyx({
+interface SessionAttributes {
+	ipAddress: string;
+}
+
+export const nyx = new Nyx<SessionAttributes>({
 	adapter: new SqliteAdapter(),
 	session: {
 		getSessionAttributes: (attrs) => ({
@@ -9,12 +13,3 @@ export const nyx = new Nyx({
 		}),
 	},
 });
-
-declare module "@nyx-auth/core" {
-	interface Register {
-		Nyx: typeof nyx;
-		DatabaseSessionAttributes: {
-			ipAddress: string;
-		};
-	}
-}

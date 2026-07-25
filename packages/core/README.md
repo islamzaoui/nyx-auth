@@ -10,10 +10,22 @@ The core library for nyx-auth. Provides the essential session management functio
 ```ts
 import { Nyx } from "@nyx-auth/core";
 
-const nyx = new Nyx(new Adapter(db));
+interface SessionAttributes {
+    ...
+}
 
-const session = await nyx.createSession(userId, {});
-await nyx.validateSession(session.id);
+const nyx = new Nyx<SessionAttributes>({
+    adapter: { ... },
+    session: {
+		getSessionAttributes: (attrs) => ({
+			...
+		}),
+	},
+});
+
+const newSession = await nyx.createSession(userId, { ... });
+
+const session = await nyx.validateSessionToken(token);
 ```
 
 ## Installation
