@@ -114,12 +114,12 @@ app.get("/me", async (c) => {
 		return c.json({ error: "not authenticated" }, 401);
 	}
 
-	const user = findUserById(session.userId);
+	const user = await findUserById(session.userId);
 	if (!user) {
 		return c.json({ error: "user no longer exists" }, 401);
 	}
 
-	return c.json({ message: "user info retrieved successfully", user, session });
+	return c.json({ message: "user info retrieved successfully", user: toPublicUser(user), session: toPublicSession(session) });
 });
 
 export default app;
