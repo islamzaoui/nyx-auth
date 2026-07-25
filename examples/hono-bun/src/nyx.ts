@@ -2,7 +2,7 @@ import { Nyx } from "@nyx-auth/core";
 import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
 import { db } from "./db";
 import { sessions } from "./db/schema";
-import type { PublicUser, User } from "./db/user";
+import type { PublicUser, User } from "./user";
 
 export const nyx = new Nyx({
 	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions } }),

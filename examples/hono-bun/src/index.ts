@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { createUser, findUserByEmail, findUserById } from "./db/user";
 import { nyx, toPublicSession, toPublicUser } from "./nyx";
+import { createUser, findUserByEmail, findUserById } from "./user";
 
 const SESSION_COOKIE = "session";
 
@@ -27,7 +27,7 @@ app.post("/register", async (c) => {
 		return c.json({ error: "password must be at least 8 characters" }, 400);
 	}
 
-	const existing = findUserByEmail(email);
+	const existing = await findUserByEmail(email);
 	if (existing) {
 		return c.json({ error: "an account with this email already exists" }, 409);
 	}
@@ -60,7 +60,7 @@ app.post("/login", async (c) => {
 		return c.json({ error: "email and password are required" }, 400);
 	}
 
-	const user = findUserByEmail(email);
+	const user = await findUserByEmail(email);
 	if (!user) {
 		return c.json({ error: "invalid email or password" }, 401);
 	}

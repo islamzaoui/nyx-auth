@@ -16,9 +16,10 @@ export const sessions = sqliteTable("sessions", {
 	userId: text("user_id")
 		.notNull()
 		.references(() => users.id, { onDelete: "cascade" }),
-	secretHash: blob("secret_hash", { mode: "buffer" }).$type<Uint8Array>().notNull(),
+	secretHash: blob("secret_hash", { mode: "buffer" }).notNull(),
 	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
 	lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }).notNull(),
+	// Additional session attributes
 	ipAddress: text("ip_address").notNull(),
 	name: text("name").notNull().default("Unknown"),
 });
