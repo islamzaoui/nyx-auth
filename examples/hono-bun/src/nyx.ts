@@ -1,15 +1,14 @@
 import { Nyx } from "@nyx-auth/core";
-import { SqliteAdapter } from "./db/adapter";
+import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
+import { db } from "./db";
+import { sessions } from "./db/schema";
 
-interface SessionAttributes {
-	ipAddress: string;
-}
-
-export const nyx = new Nyx<SessionAttributes>({
-	adapter: new SqliteAdapter(),
+export const nyx = new Nyx({
+	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions } }),
 	session: {
 		getSessionAttributes: (attrs) => ({
 			ipAddress: attrs.ipAddress,
+			role: attrs.role,
 		}),
 	},
 });

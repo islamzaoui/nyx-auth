@@ -29,6 +29,8 @@
 		"catalog": {
 			"@types/bun": "1.3.13",
 			"bunup": "0.16.32",
+			"drizzle-orm": ">=0.36.0",
+			"drizzle-kit": ">=0.28.0",
 			"typescript": "^5"
 		}
 	},

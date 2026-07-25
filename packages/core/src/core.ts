@@ -9,26 +9,26 @@ export class UnexpectedError extends Error {
 	}
 }
 
-export interface NyxOptions<Attributes extends {} = Record<never, never>> {
-	adapter: Adapter<Attributes>;
+export interface NyxOptions<DB extends {} = Record<never, never>, Attributes extends {} = Record<never, never>> {
+	adapter: Adapter<DB>;
 	session?: {
 		inactivityTimeout?: TimeSpan;
 		activityCheckInterval?: TimeSpan;
-		getSessionAttributes?: (databaseSessionAttributes: Attributes) => Attributes;
+		getSessionAttributes?: (databaseSessionAttributes: DB) => Attributes;
 	};
 }
 
-export class Nyx<Attributes extends {} = Record<never, never>> {
-	private readonly adapter: Adapter<Attributes>;
+export class Nyx<DB extends {} = Record<never, never>, Attributes extends {} = Record<never, never>> {
+	private readonly adapter: Adapter<DB>;
 	private readonly inactivityTimeout: TimeSpan;
 	private readonly activityCheckInterval: TimeSpan;
-	private readonly getSessionAttributes: (databaseSessionAttributes: Attributes) => Attributes;
+	private readonly getSessionAttributes: (databaseSessionAttributes: DB) => Attributes;
 
-	constructor(options: NyxOptions<Attributes>) {
+	constructor(options: NyxOptions<DB, Attributes>) {
 		this.adapter = options.adapter;
 		this.inactivityTimeout = options.session?.inactivityTimeout ?? new TimeSpan(10, "d");
 		this.activityCheckInterval = options.session?.activityCheckInterval ?? new TimeSpan(1, "h");
-		this.getSessionAttributes = (attr: Attributes): Attributes => {
+		this.getSessionAttributes = (attr: DB): Attributes => {
 			if (options.session?.getSessionAttributes) return options.session.getSessionAttributes(attr);
 			return {} as Attributes;
 		};
@@ -49,7 +49,7 @@ export class Nyx<Attributes extends {} = Record<never, never>> {
 			secretHash,
 			createdAt: now,
 			lastVerifiedAt: now,
-			attributes: this.getSessionAttributes(attributes),
+			attributes: attributes as unknown as DB,
 		});
 		if (insertResult instanceof AdapterError) {
 			return new UnexpectedError({ cause: insertResult });
@@ -61,7 +61,7 @@ export class Nyx<Attributes extends {} = Record<never, never>> {
 			token,
 			createdAt: now,
 			lastVerifiedAt: now,
-			...this.getSessionAttributes(attributes),
+			...attributes,
 		};
 	}
 
@@ -86,7 +86,7 @@ export class Nyx<Attributes extends {} = Record<never, never>> {
 			secretHash: session.secretHash,
 			createdAt: session.createdAt,
 			lastVerifiedAt: session.lastVerifiedAt,
-			...session.attributes,
+			...this.getSessionAttributes(session.attributes),
 		};
 	}
 

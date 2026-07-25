@@ -35,8 +35,9 @@ app.post("/register", async (c) => {
 	const passwordHash = await Bun.password.hash(password);
 	const user = createUser(email, passwordHash);
 
-	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown", role: "user" });
 	if (result instanceof Error) {
+		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
 	}
 
@@ -69,8 +70,9 @@ app.post("/login", async (c) => {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
 
-	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown", role: "user" });
 	if (result instanceof Error) {
+		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
 	}
 
@@ -104,6 +106,7 @@ app.get("/me", async (c) => {
 
 	const session = await nyx.validateSessionToken(token);
 	if (session instanceof Error) {
+		console.error("Failed to validate session:", session);
 		return c.json({ error: "something went wrong" }, 500);
 	}
 	if (!session) {
@@ -116,7 +119,7 @@ app.get("/me", async (c) => {
 		return c.json({ error: "user no longer exists" }, 401);
 	}
 
-	return c.json({ userId: user.id, email: user.email, ipAddress: session.ipAddress });
+	return c.json({ userId: user.id, email: user.email, ipAddress: session.ipAddress, role: session.role });
 });
 
 export default app;
