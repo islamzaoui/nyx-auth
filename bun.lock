@@ -15,7 +15,7 @@
         "typescript": "catalog:",
       },
     },
-    "examples/hono-bun": {
+    "examples/hono-drizzle": {
       "name": "hono-bun",
       "dependencies": {
         "@libsql/client": "0.17.4",
@@ -354,7 +354,7 @@
 
     "hono": ["hono@4.12.31", "", {}, "sha512-zJIHFrl6bq3RDd2YusFNCDlM8qUprxKswyi/OPzPyzKDdyBXDqWx8bZlZ7R+saTdSTatUmb3O7K4SspGPaEOQg=="],
 
-    "hono-bun": ["hono-bun@workspace:examples/hono-bun"],
+    "hono-bun": ["hono-bun@workspace:examples/hono-drizzle"],
 
     "husky": ["husky@9.1.7", "", { "bin": { "husky": "bin.js" } }, "sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA=="],
 
