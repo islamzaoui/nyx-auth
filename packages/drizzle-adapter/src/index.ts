@@ -90,7 +90,7 @@ export class DrizzleAdapter<A extends Attributes = Attributes> implements Adapte
 		return new DrizzleAdapter(config as never) as DrizzleAdapter<InferTableAttributes<T>>;
 	}
 
-	insertSession(session: DatabaseSession<A["insert"]>): Promise<undefined | AdapterError> {
+	insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError> {
 		return this.driver.insertSession(session);
 	}
 

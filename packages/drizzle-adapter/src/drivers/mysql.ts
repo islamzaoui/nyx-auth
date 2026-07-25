@@ -122,7 +122,7 @@ class MySQLCoreAdapter<A extends Attributes> implements Adapter<A> {
 		this.table = table;
 	}
 
-	async insertSession(session: DatabaseSession<A["insert"]>): Promise<undefined | AdapterError> {
+	async insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError> {
 		try {
 			await this.db.insert(this.table).values({
 				id: session.id,
@@ -132,7 +132,9 @@ class MySQLCoreAdapter<A extends Attributes> implements Adapter<A> {
 				lastVerifiedAt: session.lastVerifiedAt,
 				...session.attributes,
 			});
-			return undefined;
+			const [row] = await this.db.select().from(this.table).where(eq(this.table.id, session.id));
+			if (!row) return new AdapterError({ operation: "insertSession", cause: new Error("Failed to retrieve inserted session") });
+			return mapRowToSession<A["select"]>(row);
 		} catch (cause) {
 			return new AdapterError({ operation: "insertSession", cause });
 		}

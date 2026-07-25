@@ -22,7 +22,7 @@ export class AdapterError extends Error {
 }
 
 export interface Adapter<A extends Attributes = Attributes> {
-	insertSession(session: DatabaseSession<A["insert"]>): Promise<undefined | AdapterError>;
+	insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError>;
 	findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError>;
 	updateSessionbyId(
 		sessionId: string,

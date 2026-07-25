@@ -1,4 +1,4 @@
-import { type Adapter, AdapterError, type Attributes } from "./adapter";
+import { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "./adapter";
 import { TimeSpan } from "./time-span";
 import type { Session } from "./types";
 
@@ -35,10 +35,10 @@ export class Nyx<Select extends object = object, Insert extends object = object,
 	}
 
 	get $inferSession(): Session<SessionAttrs> {
-		return null!;
+		return {} as Session<SessionAttrs>;
 	}
 
-	async createSession(userId: string, attributes: Insert): Promise<{ token: string; value: Session<Select> } | UnexpectedError> {
+	async createSession(userId: string, attributes: Insert): Promise<{ token: string; value: Session<SessionAttrs> } | UnexpectedError> {
 		const now = new Date();
 
 		const id = this.generateSessionId();
@@ -62,17 +62,16 @@ export class Nyx<Select extends object = object, Insert extends object = object,
 		return {
 			token,
 			value: {
-				id,
-				userId,
-				secretHash,
-				createdAt: now,
-				lastVerifiedAt: now,
-				...attributes,
-			} as unknown as Session<Select>,
+				id: insertResult.id,
+				userId: insertResult.userId,
+				createdAt: insertResult.createdAt,
+				lastVerifiedAt: insertResult.lastVerifiedAt,
+				...this.mapSessionAttributes(insertResult.attributes),
+			},
 		};
 	}
 
-	async getSession(id: string): Promise<Session<SessionAttrs> | null | UnexpectedError> {
+	private async getRawSession(id: string): Promise<DatabaseSession<Select> | null | UnexpectedError> {
 		const now = new Date();
 
 		const session = await this.adapter.findSessionById(id);
@@ -87,10 +86,19 @@ export class Nyx<Select extends object = object, Insert extends object = object,
 			return null;
 		}
 
+		return session;
+	}
+
+	async getSession(id: string): Promise<Session<SessionAttrs> | null | UnexpectedError> {
+		const session = await this.getRawSession(id);
+		if (session instanceof Error) {
+			return session;
+		}
+		if (!session) return null;
+
 		return {
 			id: session.id,
 			userId: session.userId,
-			secretHash: session.secretHash,
 			createdAt: session.createdAt,
 			lastVerifiedAt: session.lastVerifiedAt,
 			...this.mapSessionAttributes(session.attributes),
@@ -107,30 +115,34 @@ export class Nyx<Select extends object = object, Insert extends object = object,
 		const sessionSecret = tokenParts[1];
 		if (!sessionId || !sessionSecret) return null;
 
-		const session = await this.getSession(sessionId);
-		if (session instanceof Error) {
-			return new UnexpectedError({ cause: session });
+		const dbSession = await this.getRawSession(sessionId);
+		if (dbSession instanceof Error) {
+			return dbSession;
 		}
-
-		if (!session) {
-			return null;
-		}
+		if (!dbSession) return null;
 
 		const tokenSecretHash = await this.hashSecret(sessionSecret);
-		const validSecret = this.constantTimeEqual(tokenSecretHash, session.secretHash);
+		const validSecret = this.constantTimeEqual(tokenSecretHash, dbSession.secretHash);
 		if (!validSecret) {
 			return null;
 		}
 
-		if (this.activityCheckInterval.elapsedSince(session.lastVerifiedAt, now)) {
-			session.lastVerifiedAt = now;
-			const result = await this.adapter.updateSessionbyId(session.id, { lastVerifiedAt: now });
+		let lastVerifiedAt = dbSession.lastVerifiedAt;
+		if (this.activityCheckInterval.elapsedSince(dbSession.lastVerifiedAt, now)) {
+			lastVerifiedAt = now;
+			const result = await this.adapter.updateSessionbyId(dbSession.id, { lastVerifiedAt: now });
 			if (result instanceof Error) {
 				return new UnexpectedError({ cause: result });
 			}
 		}
 
-		return session;
+		return {
+			id: dbSession.id,
+			userId: dbSession.userId,
+			createdAt: dbSession.createdAt,
+			lastVerifiedAt,
+			...this.mapSessionAttributes(dbSession.attributes),
+		};
 	}
 
 	async invalidateSession(id: string): Promise<undefined | UnexpectedError> {
