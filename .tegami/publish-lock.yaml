@@ -1,20 +1,32 @@
 core:changelogs:
-  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: patch\n---\n\n### Initial version\n\nReimplemented the structure of [lucia v3](https://github.com/lucia-auth/lucia/tree/v3) with the functionality of [Inactivity timeout sessions](https://lucia-auth.com/sessions/inactivity-timeout) plus few personal preferences.\n"
-    filename: 2026-07-24-mry6pi6n.md
+  - content: "---\npackages:\n  npm:@nyx-auth/drizzle-adapter:\n    type: minor\n---\n\n## Initial Release of the official drizzle adapter for nyx-auth\n\n- Supports MySQL, PostgreSQL, and SQLite drivers\n- Exports `mysql`, `postgresql`, and `sqlite` adapter factories\n"
+    filename: 2026-07-25-ms0utrwl.md
+    v: 0.0.0
+  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: minor\n---\n\n## Replace module augmentation with generics\n\n- Use generics instead of module augmentation to define session attributes.\n- Fix usage section in README.md\n"
+    filename: 2026-07-25-mrzlyf48.md
+    v: 0.0.0
+  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: minor\n---\n\n## Refactor nyx types and mapper for better DX & add updateSessionAttributes method\n\n- Refactored `Attributes` to a `{ select, insert }` generic shape and updated `Adapter`, `DatabaseSession`, `Session`, and related types accordingly\n- Renamed `getSessionAttributes` to `mapSessionAttributes` for clarity\n- Added `$inferSession` type inference getter\n- Added `updateSessionAttributes(sessionId, attributes)` method\n- `createSession` now returns `{ token, value: Session<Select> }` instead of `SessionWithToken`\n- Exported `AdapterError` and `Attributes` from package entry\n- Updated README example to reflect new API\n"
+    filename: 2026-07-25-ms0uy441.md
     v: 0.0.0
 core:packages:
   - id: npm:nyx-auth
     updated: false
-  - id: npm:hono-bun
-    updated: false
   - id: npm:@nyx-auth/tsconfig
     updated: false
   - changelogIds:
-      - 2026-07-24-mry6pi6n.md
+      - 2026-07-25-ms0utrwl.md
+    id: npm:@nyx-auth/drizzle-adapter
+    updated: true
+  - id: npm:hono-bun
+    updated: false
+  - changelogIds:
+      - 2026-07-25-mrzlyf48.md
+      - 2026-07-25-ms0uy441.md
     id: npm:@nyx-auth/core
     updated: true
 npm:packages:
   - id: npm:nyx-auth
-  - id: npm:hono-bun
   - id: npm:@nyx-auth/tsconfig
+  - id: npm:@nyx-auth/drizzle-adapter
+  - id: npm:hono-bun
   - id: npm:@nyx-auth/core
