@@ -1,15 +1,12 @@
 import { Hono } from "hono";
+import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createUser, findUserByEmail, findUserById } from "./db/user";
 import { nyx } from "./nyx";
 
 const SESSION_COOKIE = "session";
 
-const app = new Hono<{
-	Variables: {
-		ipAddress: string;
-	};
-}>();
+const app = new Hono();
 
 app.get("/", (c) => {
 	return c.text("Hello Hono!");
@@ -38,7 +35,7 @@ app.post("/register", async (c) => {
 	const passwordHash = await Bun.password.hash(password);
 	const user = createUser(email, passwordHash);
 
-	const result = await nyx.createSession(user.id, { ipAddress: c.var.ipAddress });
+	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		return c.json({ error: "failed to create session" }, 500);
 	}
@@ -72,7 +69,7 @@ app.post("/login", async (c) => {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
 
-	const result = await nyx.createSession(user.id, { ipAddress: c.var.ipAddress });
+	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		return c.json({ error: "failed to create session" }, 500);
 	}
@@ -122,13 +119,4 @@ app.get("/me", async (c) => {
 	return c.json({ userId: user.id, email: user.email, ipAddress: session.ipAddress });
 });
 
-const server = Bun.serve({
-	port: 3000,
-	fetch(request, server) {
-		return app.fetch(request, {
-			ipAddress: server.requestIP(request)?.address ?? "unknown",
-		});
-	},
-});
-
-console.log(`Server running on ${server.url.href}`);
+export default app;
