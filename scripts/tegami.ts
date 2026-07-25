@@ -20,6 +20,11 @@ const paper = tegami({
 			workflow: "publish.yaml",
 		},
 	},
+	groups: {
+		[group]: {
+			syncBump: true,
+		},
+	},
 	packages: {
 		"@nyx-auth/core": {
 			group,
