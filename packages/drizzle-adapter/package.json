@@ -1,0 +1,51 @@
+{
+	"name": "@nyx-auth/drizzle-adapter",
+	"description": "Drizzle ORM adapter for nyx-auth",
+	"version": "0.0.1",
+	"type": "module",
+	"files": [
+		"dist",
+		"CHANGELOG.md"
+	],
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"author": "islamzaoui",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/islamzaoui/nyx-auth",
+		"directory": "packages/drizzle-adapter"
+	},
+	"keywords": [
+		"nyx",
+		"nyx-auth",
+		"authentication",
+		"auth",
+		"drizzle",
+		"drizzle-orm"
+	],
+	"scripts": {
+		"dev": "bunup --watch",
+		"build": "bunup",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@nyx-auth/core": "workspace:*",
+		"@types/bun": "catalog:",
+		"bunup": "catalog:"
+	},
+	"peerDependencies": {
+		"@nyx-auth/core": "workspace:*",
+		"drizzle-orm": "catalog:",
+		"typescript": "catalog:"
+	}
+}

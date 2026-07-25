@@ -2,6 +2,8 @@ import { tegami } from "tegami";
 import { runCli } from "tegami/cli";
 import { github } from "tegami/plugins/github";
 
+const group = "nyx-auth";
+
 const paper = tegami({
 	plugins: [
 		github({
@@ -19,7 +21,12 @@ const paper = tegami({
 		},
 	},
 	packages: {
-		"@nyx-auth/core": {},
+		"@nyx-auth/core": {
+			group,
+		},
+		"@nyx-auth/drizzle-adapter": {
+			group,
+		},
 	},
 });
 

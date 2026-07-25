@@ -1,0 +1,22 @@
+{
+	"name": "hono-bun",
+	"private": true,
+	"scripts": {
+		"dev": "bun --watch src/index.ts",
+		"typecheck": "tsc --noEmit",
+		"generate": "drizzle-kit generate"
+	},
+	"dependencies": {
+		"@libsql/client": "0.17.4",
+		"@nyx-auth/core": "workspace:*",
+		"@nyx-auth/drizzle-adapter": "workspace:*",
+		"drizzle-orm": "catalog:",
+		"hono": "4.12.31"
+	},
+	"devDependencies": {
+		"@nyx-auth/tsconfig": "workspace:*",
+		"@types/bun": "catalog:",
+		"drizzle-kit": "catalog:",
+		"typescript": "catalog:"
+	}
+}

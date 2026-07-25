@@ -1,10 +1,15 @@
-export interface DatabaseSession<Attributes extends {} = Record<never, never>> {
+export type Attributes<Select extends object = object, Insert extends object = object> = {
+	select: Select;
+	insert: Insert;
+};
+
+export interface DatabaseSession<A extends object = object> {
 	id: string;
 	userId: string;
 	secretHash: Uint8Array;
 	createdAt: Date;
 	lastVerifiedAt: Date;
-	attributes: Attributes;
+	attributes: A;
 }
 
 export class AdapterError extends Error {
@@ -16,10 +21,13 @@ export class AdapterError extends Error {
 	}
 }
 
-export interface Adapter<Attributes extends {} = Record<never, never>> {
-	insertSession(session: DatabaseSession<Attributes>): Promise<undefined | AdapterError>;
-	findSessionById(sessionId: string): Promise<DatabaseSession<Attributes> | null | AdapterError>;
-	updateSessionbyId(sessionId: string, session: Partial<Omit<DatabaseSession<Attributes>, "id" | "userId">>): Promise<undefined | AdapterError>;
+export interface Adapter<A extends Attributes = Attributes> {
+	insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError>;
+	findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError>;
+	updateSessionbyId(
+		sessionId: string,
+		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
+	): Promise<undefined | AdapterError>;
 	deleteSessionById(sessionId: string): Promise<undefined | AdapterError>;
 	deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError>;
 }

@@ -1,8 +1,8 @@
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { createUser, findUserByEmail, findUserById } from "./db/user";
-import { nyx } from "./nyx";
+import { nyx, toPublicSession, toPublicUser } from "./nyx";
+import { createUser, findUserByEmail, findUserById } from "./user";
 
 const SESSION_COOKIE = "session";
 
@@ -27,16 +27,17 @@ app.post("/register", async (c) => {
 		return c.json({ error: "password must be at least 8 characters" }, 400);
 	}
 
-	const existing = findUserByEmail(email);
+	const existing = await findUserByEmail(email);
 	if (existing) {
 		return c.json({ error: "an account with this email already exists" }, 409);
 	}
 
 	const passwordHash = await Bun.password.hash(password);
-	const user = createUser(email, passwordHash);
+	const user = await createUser(email, passwordHash);
 
 	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
+		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
 	}
 
@@ -47,7 +48,7 @@ app.post("/register", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ ok: true, userId: user.id, email: user.email }, 201);
+	return c.json({ message: "registered successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
 });
 
 app.post("/login", async (c) => {
@@ -59,7 +60,7 @@ app.post("/login", async (c) => {
 		return c.json({ error: "email and password are required" }, 400);
 	}
 
-	const user = findUserByEmail(email);
+	const user = await findUserByEmail(email);
 	if (!user) {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
@@ -71,6 +72,7 @@ app.post("/login", async (c) => {
 
 	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
+		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
 	}
 
@@ -81,7 +83,7 @@ app.post("/login", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ ok: true, userId: user.id, email: user.email });
+	return c.json({ message: "logged in successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
 });
 
 app.post("/logout", async (c) => {
@@ -93,7 +95,7 @@ app.post("/logout", async (c) => {
 		}
 	}
 	deleteCookie(c, SESSION_COOKIE, { path: "/" });
-	return c.json({ ok: true });
+	return c.json({ message: "logged out" });
 });
 
 app.get("/me", async (c) => {
@@ -104,6 +106,7 @@ app.get("/me", async (c) => {
 
 	const session = await nyx.validateSessionToken(token);
 	if (session instanceof Error) {
+		console.error("Failed to validate session:", session);
 		return c.json({ error: "something went wrong" }, 500);
 	}
 	if (!session) {
@@ -111,12 +114,12 @@ app.get("/me", async (c) => {
 		return c.json({ error: "not authenticated" }, 401);
 	}
 
-	const user = findUserById(session.userId);
+	const user = await findUserById(session.userId);
 	if (!user) {
 		return c.json({ error: "user no longer exists" }, 401);
 	}
 
-	return c.json({ userId: user.id, email: user.email, ipAddress: session.ipAddress });
+	return c.json({ message: "user info retrieved successfully", user: toPublicUser(user), session: toPublicSession(session) });
 });
 
 export default app;

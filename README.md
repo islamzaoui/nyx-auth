@@ -5,13 +5,14 @@
 
 ## Packages
 
-| Package                         | Changelog                              |
-| ------------------------------- | -------------------------------------- |
-| [@nyx-auth/core](packages/core)  | [Changelog](packages/core/CHANGELOG.md) |
+| Package                                               | Changelog                                          |
+| ----------------------------------------------------- | -------------------------------------------------- |
+| [@nyx-auth/core](packages/core)                       | [Changelog](packages/core/CHANGELOG.md)            |
+| [@nyx-auth/drizzle-adapter](packages/drizzle-adapter) | [Changelog](packages/drizzle-adapter/CHANGELOG.md) |
 
 ## Examples
 
-**[hono-bun](examples/hono-bun)** - A simple email/password authentication example using Hono and Bun.
+**[hono + drizzle](examples/hono-drizzle)** - A simple email/password authentication example using Hono and drizzle.
 
 ## Acknowledgements
 

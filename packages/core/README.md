@@ -10,22 +10,17 @@ The core library for nyx-auth. Provides the essential session management functio
 ```ts
 import { Nyx } from "@nyx-auth/core";
 
-interface SessionAttributes {
-    ...
-}
-
-const nyx = new Nyx<SessionAttributes>({
-    adapter: { ... },
-    session: {
-		getSessionAttributes: (attrs) => ({
-			...
-		}),
-	},
+const nyx = new Nyx({
+    adapter: new DrizzleAdapter.sqlite({ db, tables: { sessions } }),
 });
+
+export type Session = typeof nyx.$inferSession;
 
 const newSession = await nyx.createSession(userId, { ... });
 
 const session = await nyx.validateSessionToken(token);
+
+await nyx.updateSessionAttributes(sessionId, { ... });
 ```
 
 ## Installation

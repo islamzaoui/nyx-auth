@@ -1,4 +1,4 @@
-export type { Adapter, DatabaseSession } from "./adapter";
+export { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "./adapter";
 export type { NyxOptions } from "./core";
 export { Nyx, UnexpectedError } from "./core";
 export { TimeSpan } from "./time-span";
