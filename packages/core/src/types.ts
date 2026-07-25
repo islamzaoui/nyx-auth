@@ -1,4 +1,4 @@
-export type Session<Attributes extends {} = Record<never, never>> = {
+export type Session<Attributes extends object = Record<never, never>> = {
 	id: string;
 	userId: string;
 	secretHash: Uint8Array;
@@ -6,7 +6,7 @@ export type Session<Attributes extends {} = Record<never, never>> = {
 	lastVerifiedAt: Date;
 } & Attributes;
 
-export type SessionWithToken<Attributes extends {} = Record<never, never>> = {
+export type SessionWithToken<Attributes extends object = Record<never, never>> = {
 	id: string;
 	userId: string;
 	token: string;

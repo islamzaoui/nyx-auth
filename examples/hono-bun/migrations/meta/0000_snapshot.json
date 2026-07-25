@@ -1,7 +1,7 @@
 {
 	"version": "6",
 	"dialect": "sqlite",
-	"id": "d1b079b0-cbb1-472d-9280-8f5c37b8c5d4",
+	"id": "40a980b3-349e-453f-ae84-5612c2b26401",
 	"prevId": "00000000-0000-0000-0000-000000000000",
 	"tables": {
 		"sessions": {
@@ -47,8 +47,15 @@
 					"type": "text",
 					"primaryKey": false,
 					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
 					"autoincrement": false,
-					"default": "''"
+					"default": "'Unknown'"
 				}
 			},
 			"indexes": {},

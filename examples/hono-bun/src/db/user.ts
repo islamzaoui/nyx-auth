@@ -2,28 +2,18 @@ import { eq } from "drizzle-orm";
 import { db } from ".";
 import { users } from "./schema";
 
-export interface User {
-	id: string;
-	email: string;
-	passwordHash: string;
-	createdAt: string;
-}
+export type User = typeof users.$inferSelect;
 
-export function createUser(email: string, passwordHash: string): User {
-	const id = crypto.randomUUID();
-	const createdAt = new Date().toISOString();
+export type PublicUser = Omit<User, "passwordHash">;
 
-	db.insert(users).values({ id, email, passwordHash, createdAt }).run();
-
-	return { id, email, passwordHash, createdAt };
+export async function createUser(email: string, passwordHash: string): Promise<User> {
+	return db.insert(users).values({ email, passwordHash }).returning().get();
 }
 
 export function findUserByEmail(email: string): User | null {
-	const row = db.select().from(users).where(eq(users.email, email)).get();
-	return row ?? null;
+	return db.select().from(users).where(eq(users.email, email)).get() ?? null;
 }
 
 export function findUserById(id: string): User | null {
-	const row = db.select().from(users).where(eq(users.id, id)).get();
-	return row ?? null;
+	return db.select().from(users).where(eq(users.id, id)).get() ?? null;
 }

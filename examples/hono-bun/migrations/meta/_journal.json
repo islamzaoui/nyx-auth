@@ -5,15 +5,8 @@
 		{
 			"idx": 0,
 			"version": "6",
-			"when": 1785000723646,
-			"tag": "0000_legal_george_stacy",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "6",
-			"when": 1785005377503,
-			"tag": "0001_huge_the_stranger",
+			"when": 1785011232877,
+			"tag": "0000_giant_ogun",
 			"breakpoints": true
 		}
 	]

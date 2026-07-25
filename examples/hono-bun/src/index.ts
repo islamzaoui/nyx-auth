@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { createUser, findUserByEmail, findUserById } from "./db/user";
-import { nyx } from "./nyx";
+import { nyx, toPublicSession, toPublicUser } from "./nyx";
 
 const SESSION_COOKIE = "session";
 
@@ -33,9 +33,9 @@ app.post("/register", async (c) => {
 	}
 
 	const passwordHash = await Bun.password.hash(password);
-	const user = createUser(email, passwordHash);
+	const user = await createUser(email, passwordHash);
 
-	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown", role: "user" });
+	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
@@ -48,7 +48,7 @@ app.post("/register", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ ok: true, userId: user.id, email: user.email }, 201);
+	return c.json({ message: "registered successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
 });
 
 app.post("/login", async (c) => {
@@ -70,7 +70,7 @@ app.post("/login", async (c) => {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
 
-	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown", role: "user" });
+	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
@@ -83,7 +83,7 @@ app.post("/login", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ ok: true, userId: user.id, email: user.email });
+	return c.json({ message: "logged in successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
 });
 
 app.post("/logout", async (c) => {
@@ -95,7 +95,7 @@ app.post("/logout", async (c) => {
 		}
 	}
 	deleteCookie(c, SESSION_COOKIE, { path: "/" });
-	return c.json({ ok: true });
+	return c.json({ message: "logged out" });
 });
 
 app.get("/me", async (c) => {
@@ -119,7 +119,7 @@ app.get("/me", async (c) => {
 		return c.json({ error: "user no longer exists" }, 401);
 	}
 
-	return c.json({ userId: user.id, email: user.email, ipAddress: session.ipAddress, role: session.role });
+	return c.json({ message: "user info retrieved successfully", user, session });
 });
 
 export default app;

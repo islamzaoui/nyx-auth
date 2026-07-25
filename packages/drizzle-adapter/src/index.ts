@@ -1,4 +1,4 @@
-import type { Adapter, AdapterError, DatabaseSession } from "@nyx-auth/core";
+import type { Adapter, AdapterError, Attributes, DatabaseSession } from "@nyx-auth/core";
 import type { MySqlDatabase } from "drizzle-orm/mysql-core";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
@@ -10,31 +10,56 @@ export type { MySQLSessionTable, PgSessionTable, SQLiteSessionTable };
 
 type BaseColumnNames = "id" | "userId" | "secretHash" | "createdAt" | "lastVerifiedAt";
 
-type InferTableAttributes<T> = T extends { _: { columns: infer Cols } }
+type InferTableSelect<T> = T extends { _: { columns: infer Cols } }
 	? { [K in keyof Cols as K extends BaseColumnNames ? never : K]: Cols[K] extends { _: { data: infer D } } ? D : never }
 	: Record<string, never>;
 
-type DrizzleAdapterConfig<A extends Record<string, any>> =
+// biome-ignore lint/complexity/noBannedTypes: standard pattern to detect optional properties
+type IsOptional<T, K extends keyof T> = {} extends Pick<T, K> ? true : false;
+
+type InferTableInsert<T> = T extends { _: { columns: infer Cols }; $inferInsert: infer Insert }
+	? {
+			[K in keyof Cols as K extends BaseColumnNames
+				? never
+				: K extends keyof Insert
+					? IsOptional<Insert, K> extends true
+						? never
+						: K
+					: never]: K extends keyof Insert ? Insert[K] : never;
+		} & {
+			[K in keyof Cols as K extends BaseColumnNames
+				? never
+				: K extends keyof Insert
+					? IsOptional<Insert, K> extends true
+						? K
+						: never
+					: never]?: K extends keyof Insert ? Insert[K] : never;
+		}
+	: Record<string, never>;
+
+type InferTableAttributes<T> = Attributes<InferTableSelect<T>, InferTableInsert<T>>;
+
+type DrizzleAdapterConfig =
 	| {
 			dialect: "sqlite";
 			db: BaseSQLiteDatabase<"async" | "sync", any, any, any>;
-			tables: { sessions: SQLiteSessionTable<A> };
+			tables: { sessions: SQLiteSessionTable };
 	  }
 	| {
 			dialect: "postgres";
 			db: PgDatabase<any, any, any>;
-			tables: { sessions: PgSessionTable<A> };
+			tables: { sessions: PgSessionTable };
 	  }
 	| {
 			dialect: "mysql";
 			db: MySqlDatabase<any, any, any>;
-			tables: { sessions: MySQLSessionTable<A> };
+			tables: { sessions: MySQLSessionTable };
 	  };
 
-export class DrizzleAdapter<A extends Record<string, any> = Record<never, never>> implements Adapter<A> {
+export class DrizzleAdapter<A extends Attributes = Attributes> implements Adapter<A> {
 	private driver: Adapter<A>;
 
-	constructor(config: DrizzleAdapterConfig<A>) {
+	constructor(config: DrizzleAdapterConfig) {
 		if (config.dialect === "sqlite") {
 			this.driver = createSQLiteAdapter<A>(config.db, config.tables.sessions as unknown as SQLiteSessionTable);
 		} else if (config.dialect === "postgres") {
@@ -65,15 +90,18 @@ export class DrizzleAdapter<A extends Record<string, any> = Record<never, never>
 		return new DrizzleAdapter(config as never) as DrizzleAdapter<InferTableAttributes<T>>;
 	}
 
-	insertSession(session: DatabaseSession<A>): Promise<undefined | AdapterError> {
+	insertSession(session: DatabaseSession<A["insert"]>): Promise<undefined | AdapterError> {
 		return this.driver.insertSession(session);
 	}
 
-	findSessionById(sessionId: string): Promise<DatabaseSession<A> | null | AdapterError> {
+	findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError> {
 		return this.driver.findSessionById(sessionId);
 	}
 
-	updateSessionbyId(sessionId: string, session: Partial<Omit<DatabaseSession<A>, "id" | "userId">>): Promise<undefined | AdapterError> {
+	updateSessionbyId(
+		sessionId: string,
+		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
+	): Promise<undefined | AdapterError> {
 		return this.driver.updateSessionbyId(sessionId, session);
 	}
 

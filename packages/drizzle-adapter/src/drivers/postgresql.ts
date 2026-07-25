@@ -1,4 +1,4 @@
-import { type Adapter, AdapterError, type DatabaseSession } from "@nyx-auth/core";
+import { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "@nyx-auth/core";
 import { eq } from "drizzle-orm";
 import type { PgColumn, PgDatabase, PgTableWithColumns } from "drizzle-orm/pg-core";
 
@@ -109,11 +109,11 @@ export type PgSessionTable<A extends Record<string, any> = Record<never, never>>
 	name: any;
 }>;
 
-export function createPostgresAdapter<A extends Record<string, any>>(db: PgDatabase<any, any, any>, table: PgSessionTable): Adapter<A> {
+export function createPostgresAdapter<A extends Attributes>(db: PgDatabase<any, any, any>, table: PgSessionTable): Adapter<A> {
 	return new PostgresCoreAdapter<A>(db, table);
 }
 
-class PostgresCoreAdapter<A extends Record<string, any>> implements Adapter<A> {
+class PostgresCoreAdapter<A extends Attributes> implements Adapter<A> {
 	private db: PgDatabase<any, any, any>;
 	private table: PgSessionTable;
 
@@ -122,7 +122,7 @@ class PostgresCoreAdapter<A extends Record<string, any>> implements Adapter<A> {
 		this.table = table;
 	}
 
-	async insertSession(session: DatabaseSession<A>): Promise<undefined | AdapterError> {
+	async insertSession(session: DatabaseSession<A["insert"]>): Promise<undefined | AdapterError> {
 		try {
 			await this.db.insert(this.table).values({
 				id: session.id,
@@ -138,22 +138,25 @@ class PostgresCoreAdapter<A extends Record<string, any>> implements Adapter<A> {
 		}
 	}
 
-	async findSessionById(sessionId: string): Promise<DatabaseSession<A> | null | AdapterError> {
+	async findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError> {
 		try {
 			const [row] = await this.db.select().from(this.table).where(eq(this.table.id, sessionId));
 			if (!row) return null;
-			return mapRowToSession<A>(row);
+			return mapRowToSession<A["select"]>(row);
 		} catch (cause) {
 			return new AdapterError({ operation: "findSessionById", cause });
 		}
 	}
 
-	async updateSessionbyId(sessionId: string, session: Partial<Omit<DatabaseSession<A>, "id" | "userId">>): Promise<undefined | AdapterError> {
+	async updateSessionbyId(
+		sessionId: string,
+		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
+	): Promise<undefined | AdapterError> {
 		try {
 			const [row] = await this.db.select().from(this.table).where(eq(this.table.id, sessionId));
 			if (!row) return undefined;
 
-			const existingSession = mapRowToSession<A>(row);
+			const existingSession = mapRowToSession<A["select"]>(row);
 			const secretHash = session.secretHash ?? existingSession.secretHash;
 			const createdAt = session.createdAt ?? existingSession.createdAt;
 			const lastVerifiedAt = session.lastVerifiedAt ?? existingSession.lastVerifiedAt;

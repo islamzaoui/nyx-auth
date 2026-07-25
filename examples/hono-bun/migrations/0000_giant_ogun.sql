@@ -4,7 +4,8 @@ CREATE TABLE `sessions` (
 	`secret_hash` blob NOT NULL,
 	`created_at` integer NOT NULL,
 	`last_verified_at` integer NOT NULL,
-	`ip_address` text DEFAULT '' NOT NULL,
+	`ip_address` text NOT NULL,
+	`name` text DEFAULT 'Unknown' NOT NULL,
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
