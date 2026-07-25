@@ -14,7 +14,7 @@ const paper = tegami({
 		}),
 	],
 	npm: {
-		client: "bun",
+		client: "npm",
 		trustedPublish: {
 			provider: "github",
 			workflow: "publish.yaml",
