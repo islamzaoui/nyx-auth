@@ -1,14 +1,14 @@
-import { type Adapter, AdapterError, type Attributes, type DatabaseUser } from "../adapter";
+import { type Adapter, AdapterError, type Attributes } from "../adapter";
 import { UnexpectedError } from "../errors";
-import type { User } from "../types";
+import type { User } from "../utils/types";
 
 export class UserAPI<Select extends object = object, Insert extends object = object, UserAttrs extends object = Select> {
-	private readonly adapter: Adapter<any, Attributes<Select, Insert>>;
+	private readonly adapter: Adapter<Attributes, Attributes<Select, Insert>>;
 	private readonly createId: () => string;
 	private readonly mapUserAttributes: (databaseUserAttributes: Select) => UserAttrs;
 
 	constructor(
-		adapter: Adapter<any, Attributes<Select, Insert>>,
+		adapter: Adapter<Attributes, Attributes<Select, Insert>>,
 		createId: () => string,
 		mapUserAttributes: (databaseUserAttributes: Select) => UserAttrs
 	) {

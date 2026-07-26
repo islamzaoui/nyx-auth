@@ -1,11 +1,8 @@
 import type { Adapter, Attributes } from "./adapter";
 import { SessionAPI } from "./api/session";
 import { UserAPI } from "./api/user";
-import { UnexpectedError } from "./errors";
 import { TimeSpan } from "./time-span";
-import type { Session, User } from "./types";
-
-export { UnexpectedError } from "./errors";
+import type { Session, User } from "./utils/types";
 
 export interface NyxOptions<
 	SessionSelect extends object = object,

@@ -1,8 +1,8 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "../adapter";
 import { UnexpectedError } from "../errors";
 import type { TimeSpan } from "../time-span";
-import type { Session, User } from "../types";
 import { constantTimeEqual, generateSessionId, hashSecret } from "../utils/crypto";
+import type { Session, User } from "../utils/types";
 
 export class SessionAPI<
 	Select extends object = object,
@@ -11,14 +11,14 @@ export class SessionAPI<
 	UserSelect extends object = object,
 	UserAttrs extends object = UserSelect,
 > {
-	private readonly adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, any>>;
+	private readonly adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, object>>;
 	private readonly inactivityTimeout: TimeSpan;
 	private readonly activityCheckInterval: TimeSpan;
 	private readonly mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs;
 	private readonly mapUserAttributes: (databaseUserAttributes: UserSelect) => UserAttrs;
 
 	constructor(
-		adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, any>>,
+		adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, object>>,
 		inactivityTimeout: TimeSpan,
 		activityCheckInterval: TimeSpan,
 		mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs,
