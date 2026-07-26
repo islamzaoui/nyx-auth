@@ -8,7 +8,7 @@ export const nyx = new Nyx({
 	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions } }),
 });
 
-export type Session = typeof nyx.$inferSession;
+export type Session = typeof nyx.session.$infer;
 
 export type PublicSession = Omit<Session, "secretHash">;
 

@@ -14,13 +14,13 @@ const nyx = new Nyx({
     adapter: new DrizzleAdapter.sqlite({ db, tables: { sessions } }),
 });
 
-export type Session = typeof nyx.$inferSession;
+type Session = typeof nyx.session.$infer;
 
-const newSession = await nyx.createSession(userId, { ... });
+const newSession = await nyx.session.create(userId, { ... });
 
-const session = await nyx.validateSessionToken(token);
+const session = await nyx.session.validateToken(token);
 
-await nyx.updateSessionAttributes(sessionId, { ... });
+await nyx.session.updateAttributes(sessionId, { ... });
 ```
 
 ## Installation
