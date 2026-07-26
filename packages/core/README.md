@@ -24,8 +24,8 @@ const nyx = new Nyx({
 });
 
 // Type inference
-type Session = typeof nyx.$inferSession;
-type User = typeof nyx.$inferUser;
+type Session = typeof nyx.session.$infer;
+type User = typeof nyx.user.$infer;
 ```
 
 ### Session management
@@ -48,11 +48,11 @@ await nyx.session.updateAttributes(sessionId, { ipAddress: "..." });
 ### User management
 
 ```ts
-const user = await nyx.user.createUser({ email, passwordHash });
+const user = await nyx.user.create({ email, passwordHash });
 
-const existingUser = await nyx.user.getUser(userId);
-await nyx.user.updateUserAttributes(userId, { email: "new@example.com" });
-await nyx.user.deleteUser(userId);
+const existingUser = await nyx.user.get(userId);
+await nyx.user.updateAttributes(userId, { email: "new@example.com" });
+await nyx.user.delete(userId);
 ```
 
 ## TimeSpan
@@ -184,8 +184,8 @@ type Attributes<Select, Insert> = {
 
 | Method                                        | Returns                                    |
 | --------------------------------------------- | ------------------------------------------ |
-| `createUser(attributes)`                      | `User` or `UnexpectedError`                |
-| `getUser(id)`                                 | `User` or `null` or `UnexpectedError`      |
-| `updateUserAttributes(id, attributes)`        | `undefined` or `UnexpectedError`           |
-| `deleteUser(id)`                              | `undefined` or `UnexpectedError`           |
-| `$inferUser`                                  | `User<UserAttrs>`                          |
+| `create(attributes)`                          | `User` or `UnexpectedError`                |
+| `get(id)`                                     | `User` or `null` or `UnexpectedError`      |
+| `updateAttributes(id, attributes)`            | `undefined` or `UnexpectedError`           |
+| `delete(id)`                                  | `undefined` or `UnexpectedError`           |
+| `$infer`                                      | `User<UserAttrs>`                          |

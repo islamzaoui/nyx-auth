@@ -1,10 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "./db/schema";
-
-export type User = typeof users.$inferSelect;
-
-export type PublicUser = Omit<User, "passwordHash">;
+import type { User } from "./nyx";
 
 export async function findUserByEmail(email: string): Promise<User | null> {
 	return db

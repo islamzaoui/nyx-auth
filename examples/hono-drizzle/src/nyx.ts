@@ -2,7 +2,6 @@ import { Nyx } from "@nyx-auth/core";
 import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
 import { db } from "./db";
 import { sessions, users } from "./db/schema";
-import type { PublicUser, User } from "./user";
 
 export const nyx = new Nyx({
 	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
@@ -11,6 +10,10 @@ export const nyx = new Nyx({
 export type Session = typeof nyx.session.$infer;
 
 export type PublicSession = Omit<Session, "secretHash">;
+
+export type User = typeof nyx.user.$infer;
+
+export type PublicUser = Omit<User, "passwordHash">;
 
 export function toPublicSession(session: Session): PublicSession {
 	return {

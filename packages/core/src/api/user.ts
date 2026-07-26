@@ -17,11 +17,11 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 		this.mapUserAttributes = mapUserAttributes;
 	}
 
-	get $inferUser(): User<UserAttrs> {
+	get $infer(): User<UserAttrs> {
 		return {} as User<UserAttrs>;
 	}
 
-	async createUser(attributes: Insert): Promise<User<UserAttrs> | UnexpectedError> {
+	async create(attributes: Insert): Promise<User<UserAttrs> | UnexpectedError> {
 		const id = this.createId();
 
 		const insertResult = await this.adapter.insertUser({
@@ -38,7 +38,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 		};
 	}
 
-	async getUser(id: string): Promise<User<UserAttrs> | null | UnexpectedError> {
+	async get(id: string): Promise<User<UserAttrs> | null | UnexpectedError> {
 		const user = await this.adapter.findUserById(id);
 		if (user instanceof AdapterError) {
 			return new UnexpectedError(user);
@@ -51,7 +51,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 		};
 	}
 
-	async updateUserAttributes(id: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
+	async updateAttributes(id: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.updateUserbyId(id, { attributes });
 		if (result instanceof AdapterError) {
 			return new UnexpectedError(result);
@@ -59,7 +59,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 		return undefined;
 	}
 
-	async deleteUser(id: string): Promise<undefined | UnexpectedError> {
+	async delete(id: string): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.deleteUserById(id);
 		if (result instanceof AdapterError) {
 			return new UnexpectedError(result);

@@ -34,7 +34,7 @@ app.post("/register", async (c) => {
 
 	const passwordHash = await Bun.password.hash(password);
 
-	const userResult = await nyx.user.createUser({ email, passwordHash, createdAt: new Date().toISOString() });
+	const userResult = await nyx.user.create({ email, passwordHash, createdAt: new Date().toISOString() });
 	if (userResult instanceof Error) {
 		console.error("Failed to create user:", userResult);
 		return c.json({ error: "failed to create user" }, 500);

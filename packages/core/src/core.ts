@@ -2,7 +2,6 @@ import type { Adapter, Attributes } from "./adapter";
 import { SessionAPI } from "./api/session";
 import { UserAPI } from "./api/user";
 import { TimeSpan } from "./time-span";
-import type { Session, User } from "./utils/types";
 
 export interface NyxOptions<
 	SessionSelect extends object = object,
@@ -50,13 +49,5 @@ export class Nyx<
 
 		this.session = new SessionAPI(options.adapter, inactivityTimeout, activityCheckInterval, mapSessionAttributes, mapUserAttributes);
 		this.user = new UserAPI(options.adapter, createId, mapUserAttributes);
-	}
-
-	get $inferSession(): Session<SessionAttrs> {
-		return {} as Session<SessionAttrs>;
-	}
-
-	get $inferUser(): User<UserAttrs> {
-		return {} as User<UserAttrs>;
 	}
 }
