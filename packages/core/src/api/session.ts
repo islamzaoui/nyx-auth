@@ -53,7 +53,7 @@ export class SessionAPI<
 			attributes,
 		});
 		if (insertResult instanceof AdapterError) {
-			return new UnexpectedError({ cause: insertResult });
+			return new UnexpectedError(insertResult);
 		}
 
 		return {
@@ -96,7 +96,7 @@ export class SessionAPI<
 
 		const combined = await this.adapter.findSessionWithUserById(sessionId);
 		if (combined instanceof AdapterError) {
-			return new UnexpectedError({ cause: combined });
+			return new UnexpectedError(combined);
 		}
 		if (!combined) return null;
 
@@ -118,7 +118,7 @@ export class SessionAPI<
 			lastVerifiedAt = now;
 			const result = await this.adapter.updateSessionbyId(dbSession.id, { lastVerifiedAt: now });
 			if (result instanceof Error) {
-				return new UnexpectedError({ cause: result });
+				return new UnexpectedError(result);
 			}
 		}
 
@@ -140,7 +140,7 @@ export class SessionAPI<
 	async invalidate(id: string): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.deleteSessionById(id);
 		if (result instanceof Error) {
-			return new UnexpectedError({ cause: result });
+			return new UnexpectedError(result);
 		}
 		return undefined;
 	}
@@ -148,7 +148,7 @@ export class SessionAPI<
 	async invalidateAll(userId: string): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.deleteSessionsByUserId(userId);
 		if (result instanceof Error) {
-			return new UnexpectedError({ cause: result });
+			return new UnexpectedError(result);
 		}
 		return undefined;
 	}
@@ -156,7 +156,7 @@ export class SessionAPI<
 	async updateAttributes(sessionId: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.updateSessionbyId(sessionId, { attributes });
 		if (result instanceof Error) {
-			return new UnexpectedError({ cause: result });
+			return new UnexpectedError(result);
 		}
 		return undefined;
 	}
@@ -166,7 +166,7 @@ export class SessionAPI<
 
 		const session = await this.adapter.findSessionById(id);
 		if (session instanceof Error) {
-			return new UnexpectedError({ cause: session });
+			return new UnexpectedError(session);
 		}
 
 		if (!session) return null;

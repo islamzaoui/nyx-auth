@@ -29,7 +29,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 			attributes,
 		});
 		if (insertResult instanceof AdapterError) {
-			return new UnexpectedError({ cause: insertResult });
+			return new UnexpectedError(insertResult);
 		}
 
 		return {
@@ -41,7 +41,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 	async getUser(id: string): Promise<User<UserAttrs> | null | UnexpectedError> {
 		const user = await this.adapter.findUserById(id);
 		if (user instanceof AdapterError) {
-			return new UnexpectedError({ cause: user });
+			return new UnexpectedError(user);
 		}
 		if (!user) return null;
 
@@ -54,7 +54,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 	async updateUserAttributes(id: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.updateUserbyId(id, { attributes });
 		if (result instanceof AdapterError) {
-			return new UnexpectedError({ cause: result });
+			return new UnexpectedError(result);
 		}
 		return undefined;
 	}
@@ -62,7 +62,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 	async deleteUser(id: string): Promise<undefined | UnexpectedError> {
 		const result = await this.adapter.deleteUserById(id);
 		if (result instanceof AdapterError) {
-			return new UnexpectedError({ cause: result });
+			return new UnexpectedError(result);
 		}
 		return undefined;
 	}
