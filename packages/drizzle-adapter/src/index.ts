@@ -88,21 +88,30 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		db: BaseSQLiteDatabase<"async" | "sync", any, any, any>;
 		tables: { sessions: T; users: U };
 	}): DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>> {
-		return new DrizzleAdapter(config as never) as DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>>;
+		return new DrizzleAdapter({ dialect: "sqlite", ...config } as DrizzleAdapterConfig) as DrizzleAdapter<
+			InferTableAttributes<T>,
+			InferUserTableAttributes<U>
+		>;
 	}
 
 	static postgres<T extends PgSessionTable, U extends PgUserTable>(config: {
 		db: PgDatabase<any, any, any>;
 		tables: { sessions: T; users: U };
 	}): DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>> {
-		return new DrizzleAdapter(config as never) as DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>>;
+		return new DrizzleAdapter({ dialect: "postgres", ...config } as DrizzleAdapterConfig) as DrizzleAdapter<
+			InferTableAttributes<T>,
+			InferUserTableAttributes<U>
+		>;
 	}
 
 	static mysql<T extends MySQLSessionTable, U extends MySQLUserTable>(config: {
 		db: MySqlDatabase<any, any, any>;
 		tables: { sessions: T; users: U };
 	}): DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>> {
-		return new DrizzleAdapter(config as never) as DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>>;
+		return new DrizzleAdapter({ dialect: "mysql", ...config } as DrizzleAdapterConfig) as DrizzleAdapter<
+			InferTableAttributes<T>,
+			InferUserTableAttributes<U>
+		>;
 	}
 
 	insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError> {

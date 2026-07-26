@@ -1,5 +1,5 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
-import { eq } from "drizzle-orm";
+import { eq, getTableName } from "drizzle-orm";
 import type { BaseSQLiteDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
 
 type AttributeColumn<T> = SQLiteColumn<{
@@ -293,11 +293,14 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 				.from(this.sessionTable)
 				.innerJoin(this.userTable, eq(this.sessionTable.userId, this.userTable.id))
 				.where(eq(this.sessionTable.id, sessionId))
-				.get()) as unknown as { session: Record<string, unknown>; user: Record<string, unknown> } | undefined;
+				.get()) as Record<string, Record<string, unknown>> | undefined;
 			if (!row) return null;
 
-			const dbSession = mapRowToSession<A["select"]>(row.session);
-			const dbUser = mapRowToUser<UA["select"]>(row.user);
+			const sessionTableName = getTableName(this.sessionTable);
+			const userTableName = getTableName(this.userTable);
+
+			const dbSession = mapRowToSession<A["select"]>(row[sessionTableName]!);
+			const dbUser = mapRowToUser<UA["select"]>(row[userTableName]!);
 
 			return { session: dbSession, user: dbUser };
 		} catch (cause) {
