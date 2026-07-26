@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { nyx, toPublicSession, toPublicUser } from "./nyx";
-import { createUser, findUserByEmail } from "./user";
+import { findUserByEmail } from "./user";
 
 const SESSION_COOKIE = "session";
 
@@ -33,9 +33,14 @@ app.post("/register", async (c) => {
 	}
 
 	const passwordHash = await Bun.password.hash(password);
-	const user = await createUser(email, passwordHash);
 
-	const result = await nyx.session.create(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const userResult = await nyx.user.createUser({ email, passwordHash, createdAt: new Date().toISOString() });
+	if (userResult instanceof Error) {
+		console.error("Failed to create user:", userResult);
+		return c.json({ error: "failed to create user" }, 500);
+	}
+
+	const result = await nyx.session.create(userResult.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
@@ -48,7 +53,7 @@ app.post("/register", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ message: "registered successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
+	return c.json({ message: "registered successfully", user: toPublicUser(userResult), session: toPublicSession(result.value) }, 200);
 });
 
 app.post("/login", async (c) => {
