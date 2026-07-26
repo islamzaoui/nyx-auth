@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { nyx, toPublicSession, toPublicUser } from "./nyx";
-import { createUser, findUserByEmail, findUserById } from "./user";
+import { createUser, findUserByEmail } from "./user";
 
 const SESSION_COOKIE = "session";
 
@@ -104,20 +104,17 @@ app.get("/me", async (c) => {
 		return c.json({ error: "not authenticated" }, 401);
 	}
 
-	const session = await nyx.session.validateToken(token);
-	if (session instanceof Error) {
-		console.error("Failed to validate session:", session);
+	const result = await nyx.session.validateToken(token);
+	if (result instanceof Error) {
+		console.error("Failed to validate session:", result);
 		return c.json({ error: "something went wrong" }, 500);
 	}
-	if (!session) {
+	if (!result) {
 		deleteCookie(c, SESSION_COOKIE, { path: "/" });
 		return c.json({ error: "not authenticated" }, 401);
 	}
 
-	const user = await findUserById(session.userId);
-	if (!user) {
-		return c.json({ error: "user no longer exists" }, 401);
-	}
+	const { session, user } = result;
 
 	return c.json({ message: "user info retrieved successfully", user: toPublicUser(user), session: toPublicSession(session) });
 });

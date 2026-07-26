@@ -1,25 +1,34 @@
-import { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "./adapter";
-import { constantTimeEqual, generateSessionId, hashSecret } from "./crypto";
-import { UnexpectedError } from "./errors";
-import type { TimeSpan } from "./time-span";
-import type { Session } from "./types";
+import { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "../adapter";
+import { UnexpectedError } from "../errors";
+import type { TimeSpan } from "../time-span";
+import type { Session, User } from "../types";
+import { constantTimeEqual, generateSessionId, hashSecret } from "../utils/crypto";
 
-export class SessionAPI<Select extends object = object, Insert extends object = object, SessionAttrs extends object = Select> {
-	private readonly adapter: Adapter<Attributes<Select, Insert>>;
+export class SessionAPI<
+	Select extends object = object,
+	Insert extends object = object,
+	SessionAttrs extends object = Select,
+	UserSelect extends object = object,
+	UserAttrs extends object = UserSelect,
+> {
+	private readonly adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, any>>;
 	private readonly inactivityTimeout: TimeSpan;
 	private readonly activityCheckInterval: TimeSpan;
 	private readonly mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs;
+	private readonly mapUserAttributes: (databaseUserAttributes: UserSelect) => UserAttrs;
 
 	constructor(
-		adapter: Adapter<Attributes<Select, Insert>>,
+		adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, any>>,
 		inactivityTimeout: TimeSpan,
 		activityCheckInterval: TimeSpan,
-		mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs
+		mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs,
+		mapUserAttributes: (databaseUserAttributes: UserSelect) => UserAttrs
 	) {
 		this.adapter = adapter;
 		this.inactivityTimeout = inactivityTimeout;
 		this.activityCheckInterval = activityCheckInterval;
 		this.mapSessionAttributes = mapSessionAttributes;
+		this.mapUserAttributes = mapUserAttributes;
 	}
 
 	get $infer(): Session<SessionAttrs> {
@@ -75,7 +84,7 @@ export class SessionAPI<Select extends object = object, Insert extends object = 
 		};
 	}
 
-	async validateToken(token: string): Promise<Session<SessionAttrs> | null | UnexpectedError> {
+	async validateToken(token: string): Promise<{ session: Session<SessionAttrs>; user: User<UserAttrs> } | null | UnexpectedError> {
 		const now = new Date();
 
 		const tokenParts = token.split(".");
@@ -85,11 +94,18 @@ export class SessionAPI<Select extends object = object, Insert extends object = 
 		const sessionSecret = tokenParts[1];
 		if (!sessionId || !sessionSecret) return null;
 
-		const dbSession = await this.getRawSession(sessionId);
-		if (dbSession instanceof Error) {
-			return dbSession;
+		const combined = await this.adapter.findSessionWithUserById(sessionId);
+		if (combined instanceof AdapterError) {
+			return new UnexpectedError({ cause: combined });
 		}
-		if (!dbSession) return null;
+		if (!combined) return null;
+
+		const { session: dbSession, user: dbUser } = combined;
+
+		if (this.inactivityTimeout.elapsedSince(dbSession.lastVerifiedAt, now)) {
+			await this.adapter.deleteSessionById(dbSession.id);
+			return null;
+		}
 
 		const tokenSecretHash = await hashSecret(sessionSecret);
 		const validSecret = constantTimeEqual(tokenSecretHash, dbSession.secretHash);
@@ -107,11 +123,17 @@ export class SessionAPI<Select extends object = object, Insert extends object = 
 		}
 
 		return {
-			id: dbSession.id,
-			userId: dbSession.userId,
-			createdAt: dbSession.createdAt,
-			lastVerifiedAt,
-			...this.mapSessionAttributes(dbSession.attributes),
+			session: {
+				id: dbSession.id,
+				userId: dbSession.userId,
+				createdAt: dbSession.createdAt,
+				lastVerifiedAt,
+				...this.mapSessionAttributes(dbSession.attributes),
+			},
+			user: {
+				id: dbUser.id,
+				...this.mapUserAttributes(dbUser.attributes),
+			},
 		};
 	}
 

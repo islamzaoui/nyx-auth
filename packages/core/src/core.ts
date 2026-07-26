@@ -1,35 +1,65 @@
 import type { Adapter, Attributes } from "./adapter";
+import { SessionAPI } from "./api/session";
+import { UserAPI } from "./api/user";
 import { UnexpectedError } from "./errors";
-import { SessionAPI } from "./session-api";
 import { TimeSpan } from "./time-span";
-import type { Session } from "./types";
+import type { Session, User } from "./types";
 
 export { UnexpectedError } from "./errors";
 
-export interface NyxOptions<Select extends object = object, Insert extends object = object, SessionAttrs extends object = Select> {
-	adapter: Adapter<Attributes<Select, Insert>>;
+export interface NyxOptions<
+	SessionSelect extends object = object,
+	SessionInsert extends object = object,
+	SessionAttrs extends object = SessionSelect,
+	UserSelect extends object = object,
+	UserInsert extends object = object,
+	UserAttrs extends object = UserSelect,
+> {
+	adapter: Adapter<Attributes<SessionSelect, SessionInsert>, Attributes<UserSelect, UserInsert>>;
 	session?: {
 		inactivityTimeout?: TimeSpan;
 		activityCheckInterval?: TimeSpan;
-		mapSessionAttributes?: (databaseSessionAttributes: Select) => SessionAttrs;
+		mapSessionAttributes?: (databaseSessionAttributes: SessionSelect) => SessionAttrs;
+	};
+	user?: {
+		createId?: () => string;
+		mapUserAttributes?: (databaseUserAttributes: UserSelect) => UserAttrs;
 	};
 }
 
-export class Nyx<Select extends object = object, Insert extends object = object, SessionAttrs extends object = Select> {
-	readonly session: SessionAPI<Select, Insert, SessionAttrs>;
+export class Nyx<
+	SessionSelect extends object = object,
+	SessionInsert extends object = object,
+	SessionAttrs extends object = SessionSelect,
+	UserSelect extends object = object,
+	UserInsert extends object = object,
+	UserAttrs extends object = UserSelect,
+> {
+	readonly session: SessionAPI<SessionSelect, SessionInsert, SessionAttrs, UserSelect, UserAttrs>;
+	readonly user: UserAPI<UserSelect, UserInsert, UserAttrs>;
 
-	constructor(options: NyxOptions<Select, Insert, SessionAttrs>) {
+	constructor(options: NyxOptions<SessionSelect, SessionInsert, SessionAttrs, UserSelect, UserInsert, UserAttrs>) {
 		const inactivityTimeout = options.session?.inactivityTimeout ?? new TimeSpan(10, "d");
 		const activityCheckInterval = options.session?.activityCheckInterval ?? new TimeSpan(1, "h");
-		const mapSessionAttributes = (attr: Select): SessionAttrs => {
+		const mapSessionAttributes = (attr: SessionSelect): SessionAttrs => {
 			if (options.session?.mapSessionAttributes) return options.session.mapSessionAttributes(attr);
 			return attr as unknown as SessionAttrs;
 		};
+		const createId = options.user?.createId ?? (() => crypto.randomUUID());
+		const mapUserAttributes = (attr: UserSelect): UserAttrs => {
+			if (options.user?.mapUserAttributes) return options.user.mapUserAttributes(attr);
+			return attr as unknown as UserAttrs;
+		};
 
-		this.session = new SessionAPI(options.adapter, inactivityTimeout, activityCheckInterval, mapSessionAttributes);
+		this.session = new SessionAPI(options.adapter, inactivityTimeout, activityCheckInterval, mapSessionAttributes, mapUserAttributes);
+		this.user = new UserAPI(options.adapter, createId, mapUserAttributes);
 	}
 
 	get $inferSession(): Session<SessionAttrs> {
 		return {} as Session<SessionAttrs>;
+	}
+
+	get $inferUser(): User<UserAttrs> {
+		return {} as User<UserAttrs>;
 	}
 }
