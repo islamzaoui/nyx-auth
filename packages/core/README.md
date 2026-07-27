@@ -16,7 +16,7 @@ bun add @nyx-auth/core
 ### Create instance & Infer types
 
 ```ts
-import { Nyx } from "@nyx-auth/core";
+import { Nyx, UnexpectedError } from "@nyx-auth/core";
 import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter"; // or any other adapter
 
 const nyx = new Nyx({
@@ -32,11 +32,16 @@ type User = typeof nyx.user.$infer;
 
 ```ts
 const sessionResult = await nyx.session.create(userId, { ipAddress: "..." });
-const token = sessionResult.token;
-const session = sessionResult.value;
+if (sessionResult instanceof UnexpectedError) {
+    // handle error
+}
+const { token, value: session } = sessionResult;
 
 const validated = await nyx.session.validateToken(token);
-if(validated) {
+if (validated instanceof UnexpectedError) {
+    // handle error
+}
+if (validated) {
     const { session, user } = validated;
 }
 
@@ -49,8 +54,14 @@ await nyx.session.updateAttributes(sessionId, { ipAddress: "..." });
 
 ```ts
 const user = await nyx.user.create({ email, passwordHash });
+if (user instanceof UnexpectedError) {
+    // handle error
+}
 
 const existingUser = await nyx.user.get(userId);
+if (existingUser instanceof UnexpectedError) {
+    // handle error
+}
 await nyx.user.updateAttributes(userId, { email: "new@example.com" });
 await nyx.user.delete(userId);
 ```
