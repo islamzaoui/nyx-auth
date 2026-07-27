@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { nyx, toPublicSession, toPublicUser } from "./nyx";
-import { createUser, findUserByEmail, findUserById } from "./user";
+import { findUserByEmail } from "./user";
 
 const SESSION_COOKIE = "session";
 
@@ -33,9 +33,14 @@ app.post("/register", async (c) => {
 	}
 
 	const passwordHash = await Bun.password.hash(password);
-	const user = await createUser(email, passwordHash);
 
-	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const userResult = await nyx.user.create({ email, passwordHash, createdAt: new Date().toISOString() });
+	if (userResult instanceof Error) {
+		console.error("Failed to create user:", userResult);
+		return c.json({ error: "failed to create user" }, 500);
+	}
+
+	const result = await nyx.session.create(userResult.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
@@ -48,7 +53,7 @@ app.post("/register", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ message: "registered successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
+	return c.json({ message: "registered successfully", user: toPublicUser(userResult), session: toPublicSession(result.value) }, 200);
 });
 
 app.post("/login", async (c) => {
@@ -70,7 +75,7 @@ app.post("/login", async (c) => {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
 
-	const result = await nyx.createSession(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const result = await nyx.session.create(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
@@ -91,7 +96,7 @@ app.post("/logout", async (c) => {
 	if (token) {
 		const sessionId = token.split(".")[0];
 		if (sessionId) {
-			await nyx.invalidateSession(sessionId);
+			await nyx.session.invalidate(sessionId);
 		}
 	}
 	deleteCookie(c, SESSION_COOKIE, { path: "/" });
@@ -104,20 +109,17 @@ app.get("/me", async (c) => {
 		return c.json({ error: "not authenticated" }, 401);
 	}
 
-	const session = await nyx.validateSessionToken(token);
-	if (session instanceof Error) {
-		console.error("Failed to validate session:", session);
+	const result = await nyx.session.validateToken(token);
+	if (result instanceof Error) {
+		console.error("Failed to validate session:", result);
 		return c.json({ error: "something went wrong" }, 500);
 	}
-	if (!session) {
+	if (!result) {
 		deleteCookie(c, SESSION_COOKIE, { path: "/" });
 		return c.json({ error: "not authenticated" }, 401);
 	}
 
-	const user = await findUserById(session.userId);
-	if (!user) {
-		return c.json({ error: "user no longer exists" }, 401);
-	}
+	const { session, user } = result;
 
 	return c.json({ message: "user info retrieved successfully", user: toPublicUser(user), session: toPublicSession(session) });
 });

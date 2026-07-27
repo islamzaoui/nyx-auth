@@ -12,3 +12,7 @@ export type SessionWithToken<Attributes extends object = Record<never, never>> =
 	createdAt: Date;
 	lastVerifiedAt: Date;
 } & Attributes;
+
+export type User<Attributes extends object = Record<never, never>> = {
+	id: string;
+} & Attributes;

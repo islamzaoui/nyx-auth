@@ -12,6 +12,11 @@ export interface DatabaseSession<A extends object = object> {
 	attributes: A;
 }
 
+export interface DatabaseUser<A extends object = object> {
+	id: string;
+	attributes: A;
+}
+
 export class AdapterError extends Error {
 	override readonly name = "AdapterError";
 	constructor(opt: { operation: string; cause: unknown }) {
@@ -21,7 +26,7 @@ export class AdapterError extends Error {
 	}
 }
 
-export interface Adapter<A extends Attributes = Attributes> {
+export interface Adapter<A extends Attributes = Attributes, UA extends Attributes = Attributes> {
 	insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError>;
 	findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError>;
 	updateSessionbyId(
@@ -30,4 +35,11 @@ export interface Adapter<A extends Attributes = Attributes> {
 	): Promise<undefined | AdapterError>;
 	deleteSessionById(sessionId: string): Promise<undefined | AdapterError>;
 	deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError>;
+	insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError>;
+	findUserById(userId: string): Promise<DatabaseUser<UA["select"]> | null | AdapterError>;
+	updateUserbyId(userId: string, user: Partial<Omit<DatabaseUser<Partial<UA["select"]>>, "id">>): Promise<undefined | AdapterError>;
+	deleteUserById(userId: string): Promise<undefined | AdapterError>;
+	findSessionWithUserById(
+		sessionId: string
+	): Promise<{ session: DatabaseSession<A["select"]>; user: DatabaseUser<UA["select"]> } | null | AdapterError>;
 }
