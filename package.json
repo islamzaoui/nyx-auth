@@ -13,9 +13,9 @@
 	"devDependencies": {
 		"@biomejs/biome": "2.5.5",
 		"husky": "9.1.7",
-		"lint-staged": "17.1.0",
-		"tegami": "1.2.6",
-		"turbo": "2.10.5"
+		"lint-staged": "17.2.0",
+		"tegami": "1.2.7",
+		"turbo": "2.10.7"
 	},
 	"peerDependencies": {
 		"typescript": "catalog:"
