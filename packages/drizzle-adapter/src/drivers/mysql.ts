@@ -291,8 +291,12 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 			const sessionTableName = getTableName(this.sessionTable);
 			const userTableName = getTableName(this.userTable);
 
-			const dbSession = mapRowToSession<A["select"]>(row[sessionTableName]!);
-			const dbUser = mapRowToUser<UA["select"]>(row[userTableName]!);
+			const sessionRow = row[sessionTableName];
+			const userRow = row[userTableName];
+			if (!sessionRow || !userRow) return null;
+
+			const dbSession = mapRowToSession<A["select"]>(sessionRow);
+			const dbUser = mapRowToUser<UA["select"]>(userRow);
 
 			return { session: dbSession, user: dbUser };
 		} catch (cause) {
