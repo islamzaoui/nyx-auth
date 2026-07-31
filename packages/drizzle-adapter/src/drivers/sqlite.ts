@@ -207,19 +207,27 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 		}
 	}
 
-	async deleteSessionById(sessionId: string): Promise<undefined | AdapterError> {
+	async deleteSessionById(sessionId: string): Promise<boolean | AdapterError> {
 		try {
-			await this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).run();
-			return undefined;
+			const deleted = await this.db
+				.delete(this.sessionTable)
+				.where(eq(this.sessionTable.id, sessionId))
+				.returning({ id: this.sessionTable.id })
+				.all();
+			return deleted.length > 0;
 		} catch (cause) {
 			return new AdapterError({ operation: "deleteSessionById", cause });
 		}
 	}
 
-	async deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError> {
+	async deleteSessionsByUserId(userId: string): Promise<boolean | AdapterError> {
 		try {
-			await this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId)).run();
-			return undefined;
+			const deleted = await this.db
+				.delete(this.sessionTable)
+				.where(eq(this.sessionTable.userId, userId))
+				.returning({ id: this.sessionTable.id })
+				.all();
+			return deleted.length > 0;
 		} catch (cause) {
 			return new AdapterError({ operation: "deleteSessionsByUserId", cause });
 		}

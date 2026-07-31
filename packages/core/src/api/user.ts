@@ -1,4 +1,4 @@
-import { type Adapter, AdapterError, type Attributes } from "../adapter";
+import type { Adapter, Attributes } from "../adapter";
 import { UnexpectedError } from "../errors";
 import { stripUserReservedAttributes } from "../utils/attributes";
 import type { User } from "../utils/types";
@@ -23,50 +23,66 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 	}
 
 	async create(attributes: Insert): Promise<User<UserAttrs> | UnexpectedError> {
-		const id = this.createId();
+		try {
+			const id = this.createId();
 
-		const insertResult = await this.adapter.insertUser({
-			id,
-			attributes: stripUserReservedAttributes(attributes),
-		});
-		if (insertResult instanceof AdapterError) {
-			return new UnexpectedError(insertResult);
+			const insertResult = await this.adapter.insertUser({
+				id,
+				attributes: stripUserReservedAttributes(attributes),
+			});
+			if (insertResult instanceof Error) {
+				return new UnexpectedError(insertResult);
+			}
+
+			return {
+				id: insertResult.id,
+				...this.mapUserAttributes(insertResult.attributes),
+			};
+		} catch (cause) {
+			return new UnexpectedError(cause);
 		}
-
-		return {
-			id: insertResult.id,
-			...this.mapUserAttributes(insertResult.attributes),
-		};
 	}
 
 	async get(id: string): Promise<User<UserAttrs> | null | UnexpectedError> {
-		const user = await this.adapter.findUserById(id);
-		if (user instanceof AdapterError) {
-			return new UnexpectedError(user);
-		}
-		if (!user) return null;
+		try {
+			const user = await this.adapter.findUserById(id);
+			if (user instanceof Error) {
+				return new UnexpectedError(user);
+			}
+			if (!user) return null;
 
-		return {
-			id: user.id,
-			...this.mapUserAttributes(user.attributes),
-		};
+			return {
+				id: user.id,
+				...this.mapUserAttributes(user.attributes),
+			};
+		} catch (cause) {
+			return new UnexpectedError(cause);
+		}
 	}
 
 	async updateAttributes(id: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
-		const result = await this.adapter.updateUserbyId(id, {
-			attributes: stripUserReservedAttributes(attributes),
-		});
-		if (result instanceof AdapterError) {
-			return new UnexpectedError(result);
+		try {
+			const result = await this.adapter.updateUserbyId(id, {
+				attributes: stripUserReservedAttributes(attributes),
+			});
+			if (result instanceof Error) {
+				return new UnexpectedError(result);
+			}
+			return undefined;
+		} catch (cause) {
+			return new UnexpectedError(cause);
 		}
-		return undefined;
 	}
 
 	async delete(id: string): Promise<undefined | UnexpectedError> {
-		const result = await this.adapter.deleteUserById(id);
-		if (result instanceof AdapterError) {
-			return new UnexpectedError(result);
+		try {
+			const result = await this.adapter.deleteUserById(id);
+			if (result instanceof Error) {
+				return new UnexpectedError(result);
+			}
+			return undefined;
+		} catch (cause) {
+			return new UnexpectedError(cause);
 		}
-		return undefined;
 	}
 }

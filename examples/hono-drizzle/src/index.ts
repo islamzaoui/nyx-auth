@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { nyx, toPublicSession, toPublicUser } from "./nyx";
+import { nyx } from "./nyx";
 import { findUserByEmail } from "./user";
 
 const SESSION_COOKIE = "session";
@@ -59,7 +59,7 @@ app.post("/register", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ message: "registered successfully", user: toPublicUser(userResult), session: toPublicSession(result.value) }, 200);
+	return c.json({ message: "registered successfully", user: userResult, session: result.value }, 200);
 });
 
 app.post("/login", async (c) => {
@@ -94,7 +94,14 @@ app.post("/login", async (c) => {
 		path: "/",
 	});
 
-	return c.json({ message: "logged in successfully", user: toPublicUser(user), session: toPublicSession(result.value) }, 200);
+	// Fetch the public shape (password hash stripped) for the response
+	const publicUser = await nyx.user.get(user.id);
+	if (publicUser instanceof Error) {
+		console.error("Failed to fetch user:", publicUser);
+		return c.json({ error: "failed to fetch user" }, 500);
+	}
+
+	return c.json({ message: "logged in successfully", user: publicUser, session: result.value }, 200);
 });
 
 app.post("/logout", async (c) => {
@@ -102,7 +109,10 @@ app.post("/logout", async (c) => {
 	if (token) {
 		const result = await nyx.session.validateToken(token);
 		if (result && !(result instanceof Error)) {
-			await nyx.session.invalidate(result.session.id);
+			const deleted = await nyx.session.invalidate(result.session.id);
+			if (!deleted) {
+				console.warn("Session was already gone:", result.session.id);
+			}
 		}
 	}
 	deleteCookie(c, SESSION_COOKIE, { path: "/" });
@@ -127,7 +137,7 @@ app.get("/me", async (c) => {
 
 	const { session, user } = result;
 
-	return c.json({ message: "user info retrieved successfully", user: toPublicUser(user), session: toPublicSession(session) });
+	return c.json({ message: "user info retrieved successfully", user, session });
 });
 
 export default app;

@@ -129,11 +129,11 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		return this.driver.updateSessionbyId(sessionId, session);
 	}
 
-	deleteSessionById(sessionId: string): Promise<undefined | AdapterError> {
+	deleteSessionById(sessionId: string): Promise<boolean | AdapterError> {
 		return this.driver.deleteSessionById(sessionId);
 	}
 
-	deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError> {
+	deleteSessionsByUserId(userId: string): Promise<boolean | AdapterError> {
 		return this.driver.deleteSessionsByUserId(userId);
 	}
 

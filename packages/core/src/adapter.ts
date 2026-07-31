@@ -33,8 +33,8 @@ export interface Adapter<A extends Attributes = Attributes, UA extends Attribute
 		sessionId: string,
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
 	): Promise<undefined | AdapterError>;
-	deleteSessionById(sessionId: string): Promise<undefined | AdapterError>;
-	deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError>;
+	deleteSessionById(sessionId: string): Promise<boolean | AdapterError>;
+	deleteSessionsByUserId(userId: string): Promise<boolean | AdapterError>;
 	insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError>;
 	findUserById(userId: string): Promise<DatabaseUser<UA["select"]> | null | AdapterError>;
 	updateUserbyId(userId: string, user: Partial<Omit<DatabaseUser<Partial<UA["select"]>>, "id">>): Promise<undefined | AdapterError>;

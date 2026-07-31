@@ -204,19 +204,19 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 		}
 	}
 
-	async deleteSessionById(sessionId: string): Promise<undefined | AdapterError> {
+	async deleteSessionById(sessionId: string): Promise<boolean | AdapterError> {
 		try {
-			await this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId));
-			return undefined;
+			const [result] = await this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId));
+			return (result?.affectedRows ?? 0) > 0;
 		} catch (cause) {
 			return new AdapterError({ operation: "deleteSessionById", cause });
 		}
 	}
 
-	async deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError> {
+	async deleteSessionsByUserId(userId: string): Promise<boolean | AdapterError> {
 		try {
-			await this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId));
-			return undefined;
+			const [result] = await this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId));
+			return (result?.affectedRows ?? 0) > 0;
 		} catch (cause) {
 			return new AdapterError({ operation: "deleteSessionsByUserId", cause });
 		}

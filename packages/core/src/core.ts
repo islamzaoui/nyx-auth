@@ -12,14 +12,14 @@ export interface NyxOptions<
 	UserAttrs extends object = UserSelect,
 > {
 	adapter: Adapter<Attributes<SessionSelect, SessionInsert>, Attributes<UserSelect, UserInsert>>;
-	session?: {
+	session: {
 		inactivityTimeout?: TimeSpan;
 		activityCheckInterval?: TimeSpan;
-		mapSessionAttributes?: (databaseSessionAttributes: SessionSelect) => SessionAttrs;
+		mapSessionAttributes: (databaseSessionAttributes: SessionSelect) => SessionAttrs;
 	};
-	user?: {
+	user: {
 		createId?: () => string;
-		mapUserAttributes?: (databaseUserAttributes: UserSelect) => UserAttrs;
+		mapUserAttributes: (databaseUserAttributes: UserSelect) => UserAttrs;
 	};
 }
 
@@ -35,19 +35,28 @@ export class Nyx<
 	readonly user: UserAPI<UserSelect, UserInsert, UserAttrs>;
 
 	constructor(options: NyxOptions<SessionSelect, SessionInsert, SessionAttrs, UserSelect, UserInsert, UserAttrs>) {
-		const inactivityTimeout = options.session?.inactivityTimeout ?? new TimeSpan(10, "d");
-		const activityCheckInterval = options.session?.activityCheckInterval ?? new TimeSpan(1, "h");
-		const mapSessionAttributes = (attr: SessionSelect): SessionAttrs => {
-			if (options.session?.mapSessionAttributes) return options.session.mapSessionAttributes(attr);
-			return attr as unknown as SessionAttrs;
-		};
-		const createId = options.user?.createId ?? (() => crypto.randomUUID());
-		const mapUserAttributes = (attr: UserSelect): UserAttrs => {
-			if (options.user?.mapUserAttributes) return options.user.mapUserAttributes(attr);
-			return attr as unknown as UserAttrs;
-		};
+		const inactivityTimeout = options.session.inactivityTimeout ?? new TimeSpan(10, "d");
+		const activityCheckInterval = options.session.activityCheckInterval ?? new TimeSpan(1, "h");
 
-		this.session = new SessionAPI(options.adapter, inactivityTimeout, activityCheckInterval, mapSessionAttributes, mapUserAttributes);
-		this.user = new UserAPI(options.adapter, createId, mapUserAttributes);
+		if (inactivityTimeout.milliseconds() <= 0) {
+			throw new Error("Nyx: session.inactivityTimeout must be greater than zero");
+		}
+		if (activityCheckInterval.milliseconds() <= 0) {
+			throw new Error("Nyx: session.activityCheckInterval must be greater than zero");
+		}
+		if (activityCheckInterval.milliseconds() >= inactivityTimeout.milliseconds()) {
+			throw new Error("Nyx: session.activityCheckInterval must be less than session.inactivityTimeout");
+		}
+
+		const createId = options.user.createId ?? (() => crypto.randomUUID());
+
+		this.session = new SessionAPI(
+			options.adapter,
+			inactivityTimeout,
+			activityCheckInterval,
+			options.session.mapSessionAttributes,
+			options.user.mapUserAttributes
+		);
+		this.user = new UserAPI(options.adapter, createId, options.user.mapUserAttributes);
 	}
 }

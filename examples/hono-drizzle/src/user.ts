@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
 import { users } from "./db/schema";
-import type { User } from "./nyx";
 
-export async function findUserByEmail(email: string): Promise<User | null> {
+export async function findUserByEmail(email: string): Promise<typeof users.$inferSelect | null> {
 	return db
 		.select()
 		.from(users)
