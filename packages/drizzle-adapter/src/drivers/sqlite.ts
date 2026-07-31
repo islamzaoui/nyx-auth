@@ -1,6 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
 import { eq, getTableName } from "drizzle-orm";
 import type { BaseSQLiteDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
+import { stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = SQLiteColumn<{
 	dataType: any;
@@ -164,7 +165,7 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 					secretHash: session.secretHash,
 					createdAt: session.createdAt,
 					lastVerifiedAt: session.lastVerifiedAt,
-					...session.attributes,
+					...stripSessionReservedAttributes(session.attributes),
 				})
 				.returning()
 				.all();
@@ -190,25 +191,16 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
 	): Promise<undefined | AdapterError> {
 		try {
-			const row = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).get();
-			if (!row) return undefined;
+			const values: Record<string, unknown> = {
+				...stripSessionReservedAttributes(session.attributes),
+			};
+			if (session.secretHash !== undefined) values.secretHash = session.secretHash;
+			if (session.createdAt !== undefined) values.createdAt = session.createdAt;
+			if (session.lastVerifiedAt !== undefined) values.lastVerifiedAt = session.lastVerifiedAt;
 
-			const existingSession = mapRowToSession<A["select"]>(row);
-			const secretHash = session.secretHash ?? existingSession.secretHash;
-			const createdAt = session.createdAt ?? existingSession.createdAt;
-			const lastVerifiedAt = session.lastVerifiedAt ?? existingSession.lastVerifiedAt;
-			const attributes = { ...existingSession.attributes, ...session.attributes };
+			if (Object.keys(values).length === 0) return undefined;
 
-			await this.db
-				.update(this.sessionTable)
-				.set({
-					secretHash,
-					createdAt,
-					lastVerifiedAt,
-					...attributes,
-				})
-				.where(eq(this.sessionTable.id, sessionId))
-				.run();
+			await this.db.update(this.sessionTable).set(values).where(eq(this.sessionTable.id, sessionId)).run();
 			return undefined;
 		} catch (cause) {
 			return new AdapterError({ operation: "updateSessionbyId", cause });
@@ -239,7 +231,7 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 				.insert(this.userTable)
 				.values({
 					id: user.id,
-					...user.attributes,
+					...stripUserReservedAttributes(user.attributes),
 				})
 				.returning()
 				.all();
@@ -262,13 +254,10 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 
 	async updateUserbyId(userId: string, user: Partial<Omit<DatabaseUser<Partial<UA["select"]>>, "id">>): Promise<undefined | AdapterError> {
 		try {
-			const row = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId)).get();
-			if (!row) return undefined;
+			const values = stripUserReservedAttributes(user.attributes);
+			if (Object.keys(values).length === 0) return undefined;
 
-			const existingUser = mapRowToUser<UA["select"]>(row);
-			const attributes = { ...existingUser.attributes, ...user.attributes };
-
-			await this.db.update(this.userTable).set(attributes).where(eq(this.userTable.id, userId)).run();
+			await this.db.update(this.userTable).set(values).where(eq(this.userTable.id, userId)).run();
 			return undefined;
 		} catch (cause) {
 			return new AdapterError({ operation: "updateUserbyId", cause });

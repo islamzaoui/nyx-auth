@@ -1,6 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession } from "../adapter";
 import { UnexpectedError } from "../errors";
 import type { TimeSpan } from "../time-span";
+import { stripSessionReservedAttributes } from "../utils/attributes";
 import { constantTimeEqual, generateSessionId, hashSecret } from "../utils/crypto";
 import type { Session, User } from "../utils/types";
 
@@ -50,7 +51,7 @@ export class SessionAPI<
 			secretHash,
 			createdAt: now,
 			lastVerifiedAt: now,
-			attributes,
+			attributes: stripSessionReservedAttributes(attributes),
 		});
 		if (insertResult instanceof AdapterError) {
 			return new UnexpectedError(insertResult);
@@ -85,6 +86,14 @@ export class SessionAPI<
 	}
 
 	async validateToken(token: string): Promise<{ session: Session<SessionAttrs>; user: User<UserAttrs> } | null | UnexpectedError> {
+		try {
+			return await this.validateTokenInternal(token);
+		} catch (cause) {
+			return new UnexpectedError(cause);
+		}
+	}
+
+	private async validateTokenInternal(token: string): Promise<{ session: Session<SessionAttrs>; user: User<UserAttrs> } | null | UnexpectedError> {
 		const now = new Date();
 
 		const tokenParts = token.split(".");
@@ -103,7 +112,10 @@ export class SessionAPI<
 		const { session: dbSession, user: dbUser } = combined;
 
 		if (this.inactivityTimeout.elapsedSince(dbSession.lastVerifiedAt, now)) {
-			await this.adapter.deleteSessionById(dbSession.id);
+			const deleteResult = await this.adapter.deleteSessionById(dbSession.id);
+			if (deleteResult instanceof Error) {
+				return new UnexpectedError(deleteResult);
+			}
 			return null;
 		}
 
@@ -154,7 +166,9 @@ export class SessionAPI<
 	}
 
 	async updateAttributes(sessionId: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
-		const result = await this.adapter.updateSessionbyId(sessionId, { attributes });
+		const result = await this.adapter.updateSessionbyId(sessionId, {
+			attributes: stripSessionReservedAttributes(attributes),
+		});
 		if (result instanceof Error) {
 			return new UnexpectedError(result);
 		}
@@ -162,20 +176,27 @@ export class SessionAPI<
 	}
 
 	private async getRawSession(id: string): Promise<DatabaseSession<Select> | null | UnexpectedError> {
-		const now = new Date();
+		try {
+			const now = new Date();
 
-		const session = await this.adapter.findSessionById(id);
-		if (session instanceof Error) {
-			return new UnexpectedError(session);
+			const session = await this.adapter.findSessionById(id);
+			if (session instanceof Error) {
+				return new UnexpectedError(session);
+			}
+
+			if (!session) return null;
+
+			if (this.inactivityTimeout.elapsedSince(session.lastVerifiedAt, now)) {
+				const deleteResult = await this.adapter.deleteSessionById(session.id);
+				if (deleteResult instanceof Error) {
+					return new UnexpectedError(deleteResult);
+				}
+				return null;
+			}
+
+			return session;
+		} catch (cause) {
+			return new UnexpectedError(cause);
 		}
-
-		if (!session) return null;
-
-		if (this.inactivityTimeout.elapsedSince(session.lastVerifiedAt, now)) {
-			await this.adapter.deleteSessionById(session.id);
-			return null;
-		}
-
-		return session;
 	}
 }

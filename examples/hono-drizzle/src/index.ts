@@ -5,6 +5,9 @@ import { nyx, toPublicSession, toPublicUser } from "./nyx";
 import { findUserByEmail } from "./user";
 
 const SESSION_COOKIE = "session";
+const MAX_PASSWORD_LENGTH = 72;
+
+const DUMMY_PASSWORD_HASH = "$argon2id$v=19$m=65536,t=2,p=1$Hu8H6CbB/rgrgxStqed7B3YrhlFoTS+3WM+GtDNtbk8$tDgif5fkKeOaBexjmffYHVdXy24QIGsZE9r+R+t3fMU";
 
 const app = new Hono();
 
@@ -25,6 +28,9 @@ app.post("/register", async (c) => {
 	}
 	if (password.length < 8) {
 		return c.json({ error: "password must be at least 8 characters" }, 400);
+	}
+	if (password.length > MAX_PASSWORD_LENGTH) {
+		return c.json({ error: "password must be at most 72 characters" }, 400);
 	}
 
 	const existing = await findUserByEmail(email);
@@ -64,14 +70,14 @@ app.post("/login", async (c) => {
 	if (!email || !password) {
 		return c.json({ error: "email and password are required" }, 400);
 	}
-
-	const user = await findUserByEmail(email);
-	if (!user) {
-		return c.json({ error: "invalid email or password" }, 401);
+	if (password.length > MAX_PASSWORD_LENGTH) {
+		return c.json({ error: "password must be at most 72 characters" }, 400);
 	}
 
-	const validPassword = await Bun.password.verify(password, user.passwordHash);
-	if (!validPassword) {
+	const user = await findUserByEmail(email);
+
+	const validPassword = await Bun.password.verify(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+	if (!user || !validPassword) {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
 
@@ -94,9 +100,9 @@ app.post("/login", async (c) => {
 app.post("/logout", async (c) => {
 	const token = getCookie(c, SESSION_COOKIE);
 	if (token) {
-		const sessionId = token.split(".")[0];
-		if (sessionId) {
-			await nyx.session.invalidate(sessionId);
+		const result = await nyx.session.validateToken(token);
+		if (result && !(result instanceof Error)) {
+			await nyx.session.invalidate(result.session.id);
 		}
 	}
 	deleteCookie(c, SESSION_COOKIE, { path: "/" });

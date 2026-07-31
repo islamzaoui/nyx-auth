@@ -1,5 +1,6 @@
 import { type Adapter, AdapterError, type Attributes } from "../adapter";
 import { UnexpectedError } from "../errors";
+import { stripUserReservedAttributes } from "../utils/attributes";
 import type { User } from "../utils/types";
 
 export class UserAPI<Select extends object = object, Insert extends object = object, UserAttrs extends object = Select> {
@@ -26,7 +27,7 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 
 		const insertResult = await this.adapter.insertUser({
 			id,
-			attributes,
+			attributes: stripUserReservedAttributes(attributes),
 		});
 		if (insertResult instanceof AdapterError) {
 			return new UnexpectedError(insertResult);
@@ -52,7 +53,9 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 	}
 
 	async updateAttributes(id: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
-		const result = await this.adapter.updateUserbyId(id, { attributes });
+		const result = await this.adapter.updateUserbyId(id, {
+			attributes: stripUserReservedAttributes(attributes),
+		});
 		if (result instanceof AdapterError) {
 			return new UnexpectedError(result);
 		}

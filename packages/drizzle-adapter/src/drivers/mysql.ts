@@ -1,6 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
 import { eq, getTableName } from "drizzle-orm";
 import type { MySqlColumn, MySqlDatabase, MySqlTableWithColumns } from "drizzle-orm/mysql-core";
+import { stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = MySqlColumn<{
 	dataType: any;
@@ -162,7 +163,7 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 				secretHash: session.secretHash,
 				createdAt: session.createdAt,
 				lastVerifiedAt: session.lastVerifiedAt,
-				...session.attributes,
+				...stripSessionReservedAttributes(session.attributes),
 			});
 			const [row] = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, session.id));
 			if (!row) return new AdapterError({ operation: "insertSession", cause: new Error("Failed to retrieve inserted session") });
@@ -187,24 +188,16 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
 	): Promise<undefined | AdapterError> {
 		try {
-			const [row] = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, sessionId));
-			if (!row) return undefined;
+			const values: Record<string, unknown> = {
+				...stripSessionReservedAttributes(session.attributes),
+			};
+			if (session.secretHash !== undefined) values.secretHash = session.secretHash;
+			if (session.createdAt !== undefined) values.createdAt = session.createdAt;
+			if (session.lastVerifiedAt !== undefined) values.lastVerifiedAt = session.lastVerifiedAt;
 
-			const existingSession = mapRowToSession<A["select"]>(row);
-			const secretHash = session.secretHash ?? existingSession.secretHash;
-			const createdAt = session.createdAt ?? existingSession.createdAt;
-			const lastVerifiedAt = session.lastVerifiedAt ?? existingSession.lastVerifiedAt;
-			const attributes = { ...existingSession.attributes, ...session.attributes };
+			if (Object.keys(values).length === 0) return undefined;
 
-			await this.db
-				.update(this.sessionTable)
-				.set({
-					secretHash,
-					createdAt,
-					lastVerifiedAt,
-					...attributes,
-				})
-				.where(eq(this.sessionTable.id, sessionId));
+			await this.db.update(this.sessionTable).set(values).where(eq(this.sessionTable.id, sessionId));
 			return undefined;
 		} catch (cause) {
 			return new AdapterError({ operation: "updateSessionbyId", cause });
@@ -233,7 +226,7 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 		try {
 			await this.db.insert(this.userTable).values({
 				id: user.id,
-				...user.attributes,
+				...stripUserReservedAttributes(user.attributes),
 			});
 			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, user.id));
 			if (!row) return new AdapterError({ operation: "insertUser", cause: new Error("Failed to retrieve inserted user") });
@@ -255,13 +248,10 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 	async updateUserbyId(userId: string, user: Partial<Omit<DatabaseUser<Partial<UA["select"]>>, "id">>): Promise<undefined | AdapterError> {
 		try {
-			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId));
-			if (!row) return undefined;
+			const values = stripUserReservedAttributes(user.attributes);
+			if (Object.keys(values).length === 0) return undefined;
 
-			const existingUser = mapRowToUser<UA["select"]>(row);
-			const attributes = { ...existingUser.attributes, ...user.attributes };
-
-			await this.db.update(this.userTable).set(attributes).where(eq(this.userTable.id, userId));
+			await this.db.update(this.userTable).set(values).where(eq(this.userTable.id, userId));
 			return undefined;
 		} catch (cause) {
 			return new AdapterError({ operation: "updateUserbyId", cause });
