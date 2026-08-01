@@ -157,11 +157,7 @@ export class SessionAPI<
 	 * @returns The validated session and its user, `null` if invalid, or an {@link UnexpectedError} on failure.
 	 */
 	async validateToken(token: string): Promise<{ session: Session<SessionAttrs>; user: User<UserAttrs> } | null | UnexpectedError> {
-		try {
-			return await this.validateTokenInternal(token);
-		} catch (cause) {
-			return new UnexpectedError(cause);
-		}
+		return this.validateTokenInternal(token).catch((cause) => new UnexpectedError(cause));
 	}
 
 	private async validateTokenInternal(token: string): Promise<{ session: Session<SessionAttrs>; user: User<UserAttrs> } | null | UnexpectedError> {
@@ -245,15 +241,10 @@ export class SessionAPI<
 	 * @returns `true` if the session was deleted, `false` if it did not exist, or an {@link UnexpectedError} on failure.
 	 */
 	async invalidate(id: string): Promise<boolean | UnexpectedError> {
-		try {
-			const result = await this.adapter.deleteSessionById(id);
-			if (result instanceof Error) {
-				return new UnexpectedError(result);
-			}
-			return result;
-		} catch (cause) {
-			return new UnexpectedError(cause);
-		}
+		return this.adapter
+			.deleteSessionById(id)
+			.then((result) => (result instanceof Error ? new UnexpectedError(result) : result))
+			.catch((cause) => new UnexpectedError(cause));
 	}
 
 	/**
@@ -267,16 +258,11 @@ export class SessionAPI<
 	 * @returns The number of sessions deleted, or an {@link UnexpectedError} on failure.
 	 */
 	async invalidateExpiredSessions(): Promise<number | UnexpectedError> {
-		try {
-			const olderThan = new Date(this.now().getTime() - this.inactivityTimeout.milliseconds());
-			const result = await this.adapter.deleteExpiredSessions(olderThan);
-			if (result instanceof Error) {
-				return new UnexpectedError(result);
-			}
-			return result;
-		} catch (cause) {
-			return new UnexpectedError(cause);
-		}
+		const olderThan = new Date(this.now().getTime() - this.inactivityTimeout.milliseconds());
+		return this.adapter
+			.deleteExpiredSessions(olderThan)
+			.then((result) => (result instanceof Error ? new UnexpectedError(result) : result))
+			.catch((cause) => new UnexpectedError(cause));
 	}
 
 	/**
@@ -289,15 +275,10 @@ export class SessionAPI<
 	 * @returns `true` if at least one session was deleted, `false` otherwise, or an {@link UnexpectedError} on failure.
 	 */
 	async invalidateAll(userId: string): Promise<boolean | UnexpectedError> {
-		try {
-			const result = await this.adapter.deleteSessionsByUserId(userId);
-			if (result instanceof Error) {
-				return new UnexpectedError(result);
-			}
-			return result;
-		} catch (cause) {
-			return new UnexpectedError(cause);
-		}
+		return this.adapter
+			.deleteSessionsByUserId(userId)
+			.then((result) => (result instanceof Error ? new UnexpectedError(result) : result))
+			.catch((cause) => new UnexpectedError(cause));
 	}
 
 	/**
