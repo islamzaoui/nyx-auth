@@ -7,7 +7,9 @@ import { findUserByEmail } from "./user";
 const SESSION_COOKIE = "session";
 const MAX_PASSWORD_LENGTH = 72;
 
-const DUMMY_PASSWORD_HASH = "$argon2id$v=19$m=65536,t=2,p=1$Hu8H6CbB/rgrgxStqed7B3YrhlFoTS+3WM+GtDNtbk8$tDgif5fkKeOaBexjmffYHVdXy24QIGsZE9r+R+t3fMU";
+// Derived at startup so the dummy always uses the same argon2id parameters as
+// real hashing, keeping the login timing path equal for unknown emails.
+const DUMMY_PASSWORD_HASH = await Bun.password.hash(crypto.randomUUID());
 
 const app = new Hono();
 

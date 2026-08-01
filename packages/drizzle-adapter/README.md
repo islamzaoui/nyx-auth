@@ -167,9 +167,14 @@ sqliteTable(
     {
         // ...columns
     },
-    (t) => [index("sessions_user_id_idx").on(t.userId)],
+    (t) => [
+        index("sessions_user_id_idx").on(t.userId),
+        index("sessions_last_verified_at_idx").on(t.lastVerifiedAt),
+    ],
 );
 ```
+
+Also index the session table's `lastVerifiedAt` column if you use `nyx.session.invalidateExpiredSessions` — the sweep deletes rows with `lastVerifiedAt <= cutoff`, and without an index it scans and locks the whole table on every run.
 
 ## Type inference
 

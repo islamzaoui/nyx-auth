@@ -25,5 +25,5 @@ export const sessions = sqliteTable(
 		ipAddress: text("ip_address").notNull(),
 		name: text("name").notNull().default("Unknown"),
 	},
-	(t) => [index("sessions_user_id_idx").on(t.userId)]
+	(t) => [index("sessions_user_id_idx").on(t.userId), index("sessions_last_verified_at_idx").on(t.lastVerifiedAt)]
 );
