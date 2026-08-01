@@ -1,6 +1,6 @@
 export function generateSessionId(): string {
 	const alphabet = "abcdefghijkmnpqrstuvwxyz23456789";
-	const bytes = new Uint8Array(24);
+	const bytes = new Uint8Array(32);
 	crypto.getRandomValues(bytes);
 
 	let id = "";

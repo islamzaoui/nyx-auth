@@ -5,31 +5,21 @@ import { sessions, users } from "./db/schema";
 
 export const nyx = new Nyx({
 	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
+	user: {
+		// Never expose the password hash to the application layer
+		mapUserAttributes: (attributes) => ({
+			email: attributes.email,
+			createdAt: attributes.createdAt,
+		}),
+	},
+	session: {
+		mapSessionAttributes: (attributes) => ({
+			ipAddress: attributes.ipAddress,
+			name: attributes.name,
+		}),
+	},
 });
 
 export type Session = typeof nyx.session.$infer;
 
-export type PublicSession = Omit<Session, "secretHash">;
-
 export type User = typeof nyx.user.$infer;
-
-export type PublicUser = Omit<User, "passwordHash">;
-
-export function toPublicSession(session: Session): PublicSession {
-	return {
-		id: session.id,
-		userId: session.userId,
-		name: session.name,
-		ipAddress: session.ipAddress,
-		createdAt: session.createdAt,
-		lastVerifiedAt: session.lastVerifiedAt,
-	};
-}
-
-export function toPublicUser(user: User): PublicUser {
-	return {
-		id: user.id,
-		email: user.email,
-		createdAt: user.createdAt,
-	};
-}

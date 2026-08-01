@@ -21,6 +21,14 @@ import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter"; // or any other adap
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({ ipAddress: attributes.ipAddress }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 
 // Type inference
@@ -45,8 +53,14 @@ if (validated) {
     const { session, user } = validated;
 }
 
-await nyx.session.invalidate(sessionId);
-await nyx.session.invalidateAll(userId);
+const deleted = await nyx.session.invalidate(sessionId); // false if no session matched
+if (deleted instanceof UnexpectedError) {
+    // handle error — the session may not have been revoked
+}
+const allDeleted = await nyx.session.invalidateAll(userId); // false if the user had no sessions
+if (allDeleted instanceof UnexpectedError) {
+    // handle error — sessions may still be active
+}
 await nyx.session.updateAttributes(sessionId, { ipAddress: "..." });
 ```
 
@@ -65,6 +79,14 @@ if (existingUser instanceof UnexpectedError) {
 await nyx.user.updateAttributes(userId, { email: "new@example.com" });
 await nyx.user.delete(userId);
 ```
+
+> [!IMPORTANT]
+> `mapUserAttributes` and `mapSessionAttributes` are **required**. They map
+> the raw user/session table columns (except reserved ones) to what your app
+> receives from `validateToken()` and `user.get()`. Without them, every column
+> — including `passwordHash`, TOTP secrets, or OAuth provider tokens — would
+> be returned to your application and could leak to any client you serialize
+> the user object to. Only map the fields your app needs.
 
 ## TimeSpan
 
@@ -128,10 +150,9 @@ import {
 | Method                                                   | Returns                                               |
 | -------------------------------------------------------- | ----------------------------------------------------- |
 | `insertSession(session)`                                 | `DatabaseSession` or `AdapterError`                   |
-| `findSessionById(sessionId)`                             | `DatabaseSession` or `null` or `AdapterError`         |
 | `updateSessionbyId(sessionId, session)`                  | `undefined` or `AdapterError`                         |
-| `deleteSessionById(sessionId)`                           | `undefined` or `AdapterError`                         |
-| `deleteSessionsByUserId(userId)`                         | `undefined` or `AdapterError`                         |
+| `deleteSessionById(sessionId)`                           | `boolean` (deleted?) or `AdapterError`                |
+| `deleteSessionsByUserId(userId)`                         | `boolean` (deleted?) or `AdapterError`                |
 | `insertUser(user)`                                       | `DatabaseUser` or `AdapterError`                      |
 | `findUserById(userId)`                                   | `DatabaseUser` or `null` or `AdapterError`            |
 | `updateUserbyId(userId, user)`                           | `undefined` or `AdapterError`                         |
@@ -175,19 +196,23 @@ type Attributes<Select, Insert> = {
 | `adapter`                       | `Adapter`              | (required)            |
 | `session.inactivityTimeout`     | `TimeSpan`             | `10 days`             |
 | `session.activityCheckInterval` | `TimeSpan`             | `1 hour`              |
-| `session.mapSessionAttributes`  | `(db) => SessionAttrs` | identity              |
+| `session.now`                   | `() => Date`           | `() => new Date()`    |
+| `session.mapSessionAttributes`  | `(db) => SessionAttrs` | (required)            |
 | `user.createId`                 | `() => string`         | `crypto.randomUUID()` |
-| `user.mapUserAttributes`        | `(db) => UserAttrs`    | identity              |
+| `user.mapUserAttributes`        | `(db) => UserAttrs`    | (required)            |
+
+`session.now` returns the current time used for expiry checks, creation
+timestamps and `lastVerifiedAt` refresh. Override it in tests to control time
+deterministically instead of sleeping against the real clock.
 
 ### `nyx.session`
 
 | Method                                    | Returns                                            |
 | ----------------------------------------- | -------------------------------------------------- |
 | `create(userId, attributes)`              | `{ token, value }` or `UnexpectedError`            |
-| `get(id)`                                 | `Session` or `null` or `UnexpectedError`           |
 | `validateToken(token)`                    | `{ session, user }` or `null` or `UnexpectedError` |
-| `invalidate(id)`                          | `undefined` or `UnexpectedError`                   |
-| `invalidateAll(userId)`                   | `undefined` or `UnexpectedError`                   |
+| `invalidate(id)`                          | `boolean` (deleted?) or `UnexpectedError`          |
+| `invalidateAll(userId)`                   | `boolean` (deleted?) or `UnexpectedError`          |
 | `updateAttributes(sessionId, attributes)` | `undefined` or `UnexpectedError`                   |
 | `$infer`                                  | `Session<SessionAttrs>`                            |
 
@@ -200,3 +225,28 @@ type Attributes<Select, Insert> = {
 | `updateAttributes(id, attributes)`            | `undefined` or `UnexpectedError`           |
 | `delete(id)`                                  | `undefined` or `UnexpectedError`           |
 | `$infer`                                      | `User<UserAttrs>`                          |
+
+## Security guidance
+
+- **Only `validateToken` authorizes.** Session IDs are not secrets — never
+  gate access with anything else.
+- **Store the token in an `HttpOnly`, `Secure`, `SameSite=Lax` (or `Strict`)
+  cookie** and never in `localStorage`, URLs, or logs. Read the token from the
+  cookie on each request, validate it, and set a new cookie when the session
+  is refreshed.
+- **Invalidate sessions on credential changes.** Call `invalidateAll(userId)`
+  when a user changes their password, email, or when you suspect compromise.
+  Also call it on privilege escalation if you want to force re-authentication.
+- **Mappers are required.** The attribute mappers define exactly what your
+  app sees — only map the fields your app needs, and keep `passwordHash`,
+  TOTP secrets, provider tokens, etc. out of the mapped shape.
+- **Delete the user's sessions when deleting a user.** `validateToken` fails
+  closed for orphaned sessions (the join finds no user), but add
+  `ON DELETE CASCADE` to the sessions table so rows don't accumulate.
+- **Don't serialize `UnexpectedError.cause` to clients.** It can contain
+  database internals (driver errors, query details).
+- **Validate session tokens server-side on every request** — the token is the
+  only credential; there is no client-side state to trust.
+- `session.inactivityTimeout` and `session.activityCheckInterval` must both be
+  greater than zero, and the check interval must be smaller than the timeout.
+  Invalid configurations throw at construction time.

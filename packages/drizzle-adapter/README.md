@@ -18,6 +18,16 @@ import { Nyx } from "@nyx-auth/core";
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({
+            ipAddress: attributes.ipAddress,
+        }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 ```
 
@@ -29,6 +39,16 @@ import { Nyx } from "@nyx-auth/core";
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.postgres({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({
+            ipAddress: attributes.ipAddress,
+        }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 ```
 
@@ -40,6 +60,16 @@ import { Nyx } from "@nyx-auth/core";
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.mysql({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({
+            ipAddress: attributes.ipAddress,
+        }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 ```
 
@@ -56,6 +86,20 @@ const adapter = new DrizzleAdapter({
     tables: { sessions, users },
 });
 ```
+
+The session and user tables must have **distinct names** — the adapter joins them
+in a single query and looks up the result by table name, so same-named tables
+(e.g. in different schemas) are rejected at construction.
+
+### Driver support
+
+- **MySQL**: inserting sessions/users is done inside a transaction (to read the
+  row back, since MySQL has no `RETURNING`). This requires a
+  transaction-capable driver such as `mysql2` or PlanetScale; proxy-style
+  drivers without transaction support cannot insert.
+- **Delete result reporting** (`invalidate` / `invalidateAll` return values)
+  works with both mysql2-style tuple results and PlanetScale-style object
+  results.
 
 ## Table schema
 
@@ -77,6 +121,10 @@ export const sessions = sqliteTable("sessions", {
     // ... custom attributes
 });
 ```
+
+The `onDelete: "cascade"` reference is important: sessions whose user row was
+deleted without cascading can never validate (the join finds no user) and are
+not cleaned up automatically — they'd accumulate as orphaned rows.
 
 ### User table (SQLite example)
 
@@ -106,6 +154,27 @@ export const users = sqliteTable("users", {
 | `id`       | `text` (PK) |
 
 For PostgreSQL and MySQL, use the corresponding column types from `drizzle-orm/pg-core` and `drizzle-orm/mysql-core`.
+
+### Recommended indexes
+
+Index the session table's `userId` column — it is used to delete all of a user's sessions and to join sessions with users, so leaving it unindexed causes a table scan on every `validateToken` call and every sign-out:
+
+```ts
+import { index, sqliteTable } from "drizzle-orm/sqlite-core";
+
+sqliteTable(
+    "sessions",
+    {
+        // ...columns
+    },
+    (t) => [
+        index("sessions_user_id_idx").on(t.userId),
+        index("sessions_last_verified_at_idx").on(t.lastVerifiedAt),
+    ],
+);
+```
+
+Also index the session table's `lastVerifiedAt` column if you use `nyx.session.invalidateExpiredSessions` — the sweep deletes rows with `lastVerifiedAt <= cutoff`, and without an index it scans and locks the whole table on every run.
 
 ## Type inference
 

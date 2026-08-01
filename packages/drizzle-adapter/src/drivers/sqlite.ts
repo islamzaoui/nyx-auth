@@ -1,6 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
-import { eq, getTableName } from "drizzle-orm";
+import { eq, getTableName, lte } from "drizzle-orm";
 import type { BaseSQLiteDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
+import { isSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = SQLiteColumn<{
 	dataType: any;
@@ -121,6 +122,15 @@ type UserBaseColumns = {
 	}>;
 };
 
+/**
+ * A SQLite session table definition.
+ *
+ * Requires base columns `id`, `userId`, `secretHash`, `createdAt` and
+ * `lastVerifiedAt`; any additional columns are treated as session
+ * attributes.
+ *
+ * @typeParam A - The session attribute columns, inferred from your table.
+ */
 export type SQLiteSessionTable<A extends Record<string, any> = Record<never, never>> = SQLiteTableWithColumns<{
 	dialect: "sqlite";
 	columns: BaseColumns & { [K in keyof A as K extends keyof BaseColumns ? never : K]: AttributeColumn<A[K]> };
@@ -128,6 +138,14 @@ export type SQLiteSessionTable<A extends Record<string, any> = Record<never, nev
 	name: any;
 }>;
 
+/**
+ * A SQLite user table definition.
+ *
+ * Requires a base `id` column; any additional columns are treated as user
+ * attributes.
+ *
+ * @typeParam A - The user attribute columns, inferred from your table.
+ */
 export type SQLiteUserTable<A extends Record<string, any> = Record<never, never>> = SQLiteTableWithColumns<{
 	dialect: "sqlite";
 	columns: UserBaseColumns & { [K in keyof A as K extends keyof UserBaseColumns ? never : K]: AttributeColumn<A[K]> };
@@ -155,8 +173,8 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 	}
 
 	async insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError> {
-		try {
-			const [row] = await this.db
+		return Promise.resolve(
+			this.db
 				.insert(this.sessionTable)
 				.values({
 					id: session.id,
@@ -164,152 +182,136 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 					secretHash: session.secretHash,
 					createdAt: session.createdAt,
 					lastVerifiedAt: session.lastVerifiedAt,
-					...session.attributes,
+					...stripSessionReservedAttributes(session.attributes),
 				})
 				.returning()
-				.all();
-			if (!row) return new AdapterError({ operation: "insertSession", cause: new Error("Failed to retrieve inserted session") });
-			return mapRowToSession<A["select"]>(row);
-		} catch (cause) {
-			return new AdapterError({ operation: "insertSession", cause });
-		}
-	}
-
-	async findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError> {
-		try {
-			const row = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).get();
-			if (!row) return null;
-			return mapRowToSession<A["select"]>(row);
-		} catch (cause) {
-			return new AdapterError({ operation: "findSessionById", cause });
-		}
+				.all()
+		)
+			.then(([row]) =>
+				row
+					? mapRowToSession<A["select"]>(row)
+					: new AdapterError({ operation: "insertSession", cause: new Error("Failed to retrieve inserted session") })
+			)
+			.catch((cause) => new AdapterError({ operation: "insertSession", cause }));
 	}
 
 	async updateSessionbyId(
 		sessionId: string,
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>
 	): Promise<undefined | AdapterError> {
-		try {
-			const row = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).get();
-			if (!row) return undefined;
+		const values: Record<string, unknown> = {
+			...stripSessionReservedAttributes(session.attributes),
+		};
+		if (session.secretHash !== undefined) values.secretHash = session.secretHash;
+		if (session.createdAt !== undefined) values.createdAt = session.createdAt;
+		if (session.lastVerifiedAt !== undefined) values.lastVerifiedAt = session.lastVerifiedAt;
 
-			const existingSession = mapRowToSession<A["select"]>(row);
-			const secretHash = session.secretHash ?? existingSession.secretHash;
-			const createdAt = session.createdAt ?? existingSession.createdAt;
-			const lastVerifiedAt = session.lastVerifiedAt ?? existingSession.lastVerifiedAt;
-			const attributes = { ...existingSession.attributes, ...session.attributes };
+		if (Object.keys(values).length === 0) return undefined;
 
-			await this.db
-				.update(this.sessionTable)
-				.set({
-					secretHash,
-					createdAt,
-					lastVerifiedAt,
-					...attributes,
-				})
-				.where(eq(this.sessionTable.id, sessionId))
-				.run();
-			return undefined;
-		} catch (cause) {
-			return new AdapterError({ operation: "updateSessionbyId", cause });
-		}
+		return Promise.resolve(this.db.update(this.sessionTable).set(values).where(eq(this.sessionTable.id, sessionId)).run())
+			.then(() => undefined)
+			.catch((cause) => new AdapterError({ operation: "updateSessionbyId", cause }));
 	}
 
-	async deleteSessionById(sessionId: string): Promise<undefined | AdapterError> {
-		try {
-			await this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).run();
-			return undefined;
-		} catch (cause) {
-			return new AdapterError({ operation: "deleteSessionById", cause });
-		}
+	async deleteSessionById(sessionId: string): Promise<boolean | AdapterError> {
+		return Promise.resolve(this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).returning({ id: this.sessionTable.id }).all())
+			.then((deleted) => deleted.length > 0)
+			.catch((cause) => new AdapterError({ operation: "deleteSessionById", cause }));
 	}
 
-	async deleteSessionsByUserId(userId: string): Promise<undefined | AdapterError> {
-		try {
-			await this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId)).run();
-			return undefined;
-		} catch (cause) {
-			return new AdapterError({ operation: "deleteSessionsByUserId", cause });
-		}
+	async deleteSessionsByUserId(userId: string): Promise<boolean | AdapterError> {
+		return Promise.resolve(
+			this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId)).returning({ id: this.sessionTable.id }).all()
+		)
+			.then((deleted) => deleted.length > 0)
+			.catch((cause) => new AdapterError({ operation: "deleteSessionsByUserId", cause }));
+	}
+
+	async deleteExpiredSessions(olderThan: Date): Promise<number | AdapterError> {
+		return Promise.resolve(
+			this.db.delete(this.sessionTable).where(lte(this.sessionTable.lastVerifiedAt, olderThan)).returning({ id: this.sessionTable.id }).all()
+		)
+			.then((deleted) => deleted.length)
+			.catch((cause) => new AdapterError({ operation: "deleteExpiredSessions", cause }));
 	}
 
 	async insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError> {
-		try {
-			const [row] = await this.db
+		return Promise.resolve(
+			this.db
 				.insert(this.userTable)
 				.values({
 					id: user.id,
-					...user.attributes,
+					...stripUserReservedAttributes(user.attributes),
 				})
 				.returning()
-				.all();
-			if (!row) return new AdapterError({ operation: "insertUser", cause: new Error("Failed to retrieve inserted user") });
-			return mapRowToUser<UA["select"]>(row);
-		} catch (cause) {
-			return new AdapterError({ operation: "insertUser", cause });
-		}
+				.all()
+		)
+			.then(([row]) =>
+				row ? mapRowToUser<UA["select"]>(row) : new AdapterError({ operation: "insertUser", cause: new Error("Failed to retrieve inserted user") })
+			)
+			.catch((cause) => new AdapterError({ operation: "insertUser", cause }));
 	}
 
 	async findUserById(userId: string): Promise<DatabaseUser<UA["select"]> | null | AdapterError> {
-		try {
-			const row = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId)).get();
-			if (!row) return null;
-			return mapRowToUser<UA["select"]>(row);
-		} catch (cause) {
-			return new AdapterError({ operation: "findUserById", cause });
-		}
+		return Promise.resolve(this.db.select().from(this.userTable).where(eq(this.userTable.id, userId)).get())
+			.then((row) => {
+				if (!row) return null;
+				return mapRowToUser<UA["select"]>(row);
+			})
+			.catch((cause) => new AdapterError({ operation: "findUserById", cause }));
 	}
 
 	async updateUserbyId(userId: string, user: Partial<Omit<DatabaseUser<Partial<UA["select"]>>, "id">>): Promise<undefined | AdapterError> {
-		try {
-			const row = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId)).get();
-			if (!row) return undefined;
+		const values = stripUserReservedAttributes(user.attributes);
+		if (Object.keys(values).length === 0) return undefined;
 
-			const existingUser = mapRowToUser<UA["select"]>(row);
-			const attributes = { ...existingUser.attributes, ...user.attributes };
-
-			await this.db.update(this.userTable).set(attributes).where(eq(this.userTable.id, userId)).run();
-			return undefined;
-		} catch (cause) {
-			return new AdapterError({ operation: "updateUserbyId", cause });
-		}
+		return Promise.resolve(this.db.update(this.userTable).set(values).where(eq(this.userTable.id, userId)).run())
+			.then(() => undefined)
+			.catch((cause) => new AdapterError({ operation: "updateUserbyId", cause }));
 	}
 
 	async deleteUserById(userId: string): Promise<undefined | AdapterError> {
-		try {
-			await this.db.delete(this.userTable).where(eq(this.userTable.id, userId)).run();
-			return undefined;
-		} catch (cause) {
-			return new AdapterError({ operation: "deleteUserById", cause });
-		}
+		return Promise.resolve(this.db.delete(this.userTable).where(eq(this.userTable.id, userId)).run())
+			.then(() => undefined)
+			.catch((cause) => new AdapterError({ operation: "deleteUserById", cause }));
 	}
 
 	async findSessionWithUserById(
 		sessionId: string
 	): Promise<{ session: DatabaseSession<A["select"]>; user: DatabaseUser<UA["select"]> } | null | AdapterError> {
-		try {
-			const row = (await this.db
+		return Promise.resolve(
+			this.db
 				.select()
 				.from(this.sessionTable)
 				.innerJoin(this.userTable, eq(this.sessionTable.userId, this.userTable.id))
 				.where(eq(this.sessionTable.id, sessionId))
-				.get()) as Record<string, Record<string, unknown>> | undefined;
-			if (!row) return null;
+				.get()
+		)
+			.then((row) => {
+				const result = row as Record<string, Record<string, unknown>> | undefined;
+				if (!result) return null;
 
-			const sessionTableName = getTableName(this.sessionTable);
-			const userTableName = getTableName(this.userTable);
+				const sessionTableName = getTableName(this.sessionTable);
+				const userTableName = getTableName(this.userTable);
 
-			const sessionRow = row[sessionTableName];
-			const userRow = row[userTableName];
-			if (!sessionRow || !userRow) return null;
+				const sessionRow = result[sessionTableName];
+				const userRow = result[userTableName];
+				if (!sessionRow || !userRow) return null;
 
-			const dbSession = mapRowToSession<A["select"]>(sessionRow);
-			const dbUser = mapRowToUser<UA["select"]>(userRow);
+				// Fail closed: a misconfigured (non-binary) secretHash column can
+				// never match a real secret, so treat the session as invalid. This
+				// keeps "existing session with bad hash" indistinguishable from
+				// "session not found", which an error path would otherwise expose.
+				if (!isSecretHash(sessionRow.secretHash)) {
+					return null;
+				}
 
-			return { session: dbSession, user: dbUser };
-		} catch (cause) {
-			return new AdapterError({ operation: "findSessionWithUserById", cause });
-		}
+				const dbSession = mapRowToSession<A["select"]>(sessionRow);
+				const dbUser = mapRowToUser<UA["select"]>(userRow);
+
+				return { session: dbSession, user: dbUser };
+			})
+			.catch((cause) => new AdapterError({ operation: "findSessionWithUserById", cause }));
 	}
 }
 

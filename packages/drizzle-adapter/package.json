@@ -36,7 +36,7 @@
 	"scripts": {
 		"dev": "bunup --watch",
 		"build": "bunup",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --build --noEmit"
 	},
 	"devDependencies": {
 		"@nyx-auth/core": "workspace:*",

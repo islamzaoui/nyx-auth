@@ -1,4 +1,4 @@
-import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const users = sqliteTable("users", {
 	id: text("id")
@@ -11,15 +11,19 @@ export const users = sqliteTable("users", {
 		.$default(() => new Date().toISOString()),
 });
 
-export const sessions = sqliteTable("sessions", {
-	id: text("id").primaryKey(),
-	userId: text("user_id")
-		.notNull()
-		.references(() => users.id, { onDelete: "cascade" }),
-	secretHash: blob("secret_hash", { mode: "buffer" }).notNull(),
-	createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
-	lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }).notNull(),
-	// Additional session attributes
-	ipAddress: text("ip_address").notNull(),
-	name: text("name").notNull().default("Unknown"),
-});
+export const sessions = sqliteTable(
+	"sessions",
+	{
+		id: text("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		secretHash: blob("secret_hash", { mode: "buffer" }).notNull(),
+		createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+		lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }).notNull(),
+		// Additional session attributes
+		ipAddress: text("ip_address").notNull(),
+		name: text("name").notNull().default("Unknown"),
+	},
+	(t) => [index("sessions_user_id_idx").on(t.userId), index("sessions_last_verified_at_idx").on(t.lastVerifiedAt)]
+);
