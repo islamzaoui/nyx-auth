@@ -28,7 +28,6 @@ export class AdapterError extends Error {
 
 export interface Adapter<A extends Attributes = Attributes, UA extends Attributes = Attributes> {
 	insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError>;
-	findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError>;
 	updateSessionbyId(
 		sessionId: string,
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>

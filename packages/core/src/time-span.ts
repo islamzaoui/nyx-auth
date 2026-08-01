@@ -13,7 +13,11 @@ export class TimeSpan {
 	constructor(
 		public readonly value: number,
 		public readonly unit: TimeSpanUnit
-	) {}
+	) {
+		if (!Number.isFinite(value)) {
+			throw new Error(`TimeSpan: value must be a finite number, got ${value}`);
+		}
+	}
 
 	public milliseconds(): number {
 		return this.value * UNIT_TO_MS[this.unit];

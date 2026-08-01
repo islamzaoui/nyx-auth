@@ -176,16 +176,6 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 		}
 	}
 
-	async findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError> {
-		try {
-			const row = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, sessionId)).get();
-			if (!row) return null;
-			return mapRowToSession<A["select"]>(row);
-		} catch (cause) {
-			return new AdapterError({ operation: "findSessionById", cause });
-		}
-	}
-
 	async updateSessionbyId(
 		sessionId: string,
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>

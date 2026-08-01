@@ -142,7 +142,6 @@ import {
 | Method                                                   | Returns                                               |
 | -------------------------------------------------------- | ----------------------------------------------------- |
 | `insertSession(session)`                                 | `DatabaseSession` or `AdapterError`                   |
-| `findSessionById(sessionId)`                             | `DatabaseSession` or `null` or `AdapterError`         |
 | `updateSessionbyId(sessionId, session)`                  | `undefined` or `AdapterError`                         |
 | `deleteSessionById(sessionId)`                           | `boolean` (deleted?) or `AdapterError`                |
 | `deleteSessionsByUserId(userId)`                         | `boolean` (deleted?) or `AdapterError`                |

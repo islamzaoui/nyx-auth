@@ -118,10 +118,6 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		return this.driver.insertSession(session);
 	}
 
-	findSessionById(sessionId: string): Promise<DatabaseSession<A["select"]> | null | AdapterError> {
-		return this.driver.findSessionById(sessionId);
-	}
-
 	updateSessionbyId(
 		sessionId: string,
 		session: Partial<Omit<DatabaseSession<Partial<A["select"]>>, "id" | "userId">>

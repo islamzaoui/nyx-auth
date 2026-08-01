@@ -110,17 +110,22 @@ export class SessionAPI<
 
 		const { session: dbSession, user: dbUser } = combined;
 
+		// The session ID is not a credential — the secret is the proof. Verify
+		// it before any state mutation (expiry deletion) so the session can
+		// only be acted upon by its holder. This also keeps the hashing work
+		// uniform across all "session found" paths, matching the dummy-hash
+		// path above.
+		const tokenSecretHash = await hashSecret(sessionSecret);
+		const validSecret = constantTimeEqual(tokenSecretHash, dbSession.secretHash);
+		if (!validSecret) {
+			return null;
+		}
+
 		const activeSession = await this.checkSessionExpiry(dbSession, now);
 		if (activeSession instanceof Error) {
 			return activeSession;
 		}
 		if (!activeSession) {
-			return null;
-		}
-
-		const tokenSecretHash = await hashSecret(sessionSecret);
-		const validSecret = constantTimeEqual(tokenSecretHash, dbSession.secretHash);
-		if (!validSecret) {
 			return null;
 		}
 
