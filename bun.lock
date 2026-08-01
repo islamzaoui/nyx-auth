@@ -33,7 +33,7 @@
     },
     "packages/core": {
       "name": "@nyx-auth/core",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "devDependencies": {
         "@types/bun": "catalog:",
         "bunup": "catalog:",
@@ -44,7 +44,7 @@
     },
     "packages/drizzle-adapter": {
       "name": "@nyx-auth/drizzle-adapter",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "devDependencies": {
         "@nyx-auth/core": "workspace:*",
         "@types/bun": "catalog:",
