@@ -5,7 +5,7 @@ import { drizzle } from "drizzle-orm/bun-sqlite";
 import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { DrizzleAdapter } from "../src";
 import { affectedRows } from "../src/drivers/mysql";
-import { assertSecretHash } from "../src/drivers/sanitize";
+import { isSecretHash } from "../src/drivers/sanitize";
 
 function expectResult<T>(result: T): Exclude<NonNullable<T>, Error> {
 	expect(result).not.toBeInstanceOf(Error);
@@ -140,7 +140,7 @@ describe("DrizzleAdapter sqlite", () => {
 		expect("secretHash" in session).toBe(false);
 	});
 
-	test("surfaces a text-typed secretHash column as an AdapterError", async () => {
+	test("treats a text-typed secretHash column as an invalid session", async () => {
 		const sqlite = new Database(":memory:");
 		sqlite.run(`CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL)`);
 		sqlite.run(`CREATE TABLE sessions_bad (
@@ -172,23 +172,20 @@ describe("DrizzleAdapter sqlite", () => {
 		} as never);
 
 		const result = await adapter.findSessionWithUserById("session-1");
-		expect(result).toBeInstanceOf(AdapterError);
-		const error = result as AdapterError;
-		expect(error.cause).toBeInstanceOf(Error);
-		expect((error.cause as Error).message).toContain("secretHash");
+		expect(result).toBeNull();
 	});
 });
 
-describe("assertSecretHash", () => {
+describe("isSecretHash", () => {
 	test("accepts Uint8Array and Buffer", () => {
-		expect(() => assertSecretHash(new Uint8Array(32))).not.toThrow();
-		expect(() => assertSecretHash(Buffer.alloc(32))).not.toThrow();
+		expect(isSecretHash(new Uint8Array(32))).toBe(true);
+		expect(isSecretHash(Buffer.alloc(32))).toBe(true);
 	});
 
 	test("rejects non-binary values", () => {
-		expect(() => assertSecretHash("c2VjcmV0")).toThrow(/secretHash/);
-		expect(() => assertSecretHash(null)).toThrow(/secretHash/);
-		expect(() => assertSecretHash(undefined)).toThrow(/secretHash/);
+		expect(isSecretHash("c2VjcmV0")).toBe(false);
+		expect(isSecretHash(null)).toBe(false);
+		expect(isSecretHash(undefined)).toBe(false);
 	});
 });
 

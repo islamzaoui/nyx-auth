@@ -184,6 +184,9 @@ export class SessionAPI<
 			// Returning early here would make the "session id not found" case
 			// measurably faster than the "wrong secret" case, letting an
 			// attacker probe which session ids exist via response timing.
+			// This equalizes the post-query crypto; the database lookup itself
+			// (joined row + mapping vs a miss) still differs slightly, so the
+			// oracle is narrowed rather than eliminated.
 			await this.compareWithDummySecret(sessionSecret);
 			return null;
 		}
@@ -299,6 +302,10 @@ export class SessionAPI<
 	/**
 	 * Updates the attributes of a session.
 	 *
+	 * Fields set to `undefined` are ignored (no write happens), so build the
+	 * update from a fresh object rather than reusing a deserialized one that
+	 * may carry `undefined` fields. Pass `null` to clear a column.
+	 *
 	 * @param sessionId - The id of the session to update.
 	 * @param attributes - The attributes to update. Reserved columns (`id`,
 	 * `userId`, `secretHash`, `createdAt`, `lastVerifiedAt`) are ignored.
@@ -331,9 +338,9 @@ export class SessionAPI<
 
 	// Performs the same cryptographic work as the real secret verification
 	// (SHA-256 hash + constant-time comparison) against a static dummy hash,
-	// and discards the result. This closes the timing oracle on session id
-	// existence: callers cannot distinguish "session not found" from
-	// "session found, wrong secret".
+	// and discards the result. This narrows the timing oracle on session id
+	// existence: the "session not found" and "session found, wrong secret"
+	// paths differ only in the database lookup cost, not in the hashing work.
 	private async compareWithDummySecret(secret: string): Promise<void> {
 		const secretHash = await hashSecret(secret);
 		void constantTimeEqual(secretHash, DUMMY_SECRET_HASH);

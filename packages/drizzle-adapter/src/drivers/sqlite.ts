@@ -1,7 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
 import { eq, getTableName, lte } from "drizzle-orm";
 import type { BaseSQLiteDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
-import { assertSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
+import { isSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = SQLiteColumn<{
 	dataType: any;
@@ -320,6 +320,14 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 			const userRow = row[userTableName];
 			if (!sessionRow || !userRow) return null;
 
+			// Fail closed: a misconfigured (non-binary) secretHash column can
+			// never match a real secret, so treat the session as invalid. This
+			// keeps "existing session with bad hash" indistinguishable from
+			// "session not found", which an error path would otherwise expose.
+			if (!isSecretHash(sessionRow.secretHash)) {
+				return null;
+			}
+
 			const dbSession = mapRowToSession<A["select"]>(sessionRow);
 			const dbUser = mapRowToUser<UA["select"]>(userRow);
 
@@ -332,7 +340,6 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 
 function mapRowToSession<A extends Record<string, any>>(row: Record<string, any>): DatabaseSession<A> {
 	const { id, userId, secretHash, createdAt, lastVerifiedAt, ...attributes } = row;
-	assertSecretHash(secretHash);
 	return {
 		id,
 		userId,
