@@ -1,32 +1,36 @@
 core:changelogs:
-  - content: "---\npackages:\n  npm:@nyx-auth/drizzle-adapter:\n    type: minor\n---\n\n## Initial Release of the official drizzle adapter for nyx-auth\n\n- Supports MySQL, PostgreSQL, and SQLite drivers\n- Exports `mysql`, `postgresql`, and `sqlite` adapter factories\n"
-    filename: 2026-07-25-ms0utrwl.md
+  - content: "---\npackages:\n  npm:@nyx-auth/drizzle-adapter:\n    type: minor\n---\n\n## Follow the updated core adapter contract\n\n- Changed `deleteSessionById` and `deleteSessionsByUserId` to return whether a row was deleted\n- Removed `findSessionById` from the adapter\n- Normalized MySQL affected-row reporting across mysql2 tuple and PlanetScale-style object results\n\n## More robust MySQL inserts\n\n- Wrapped MySQL session and user inserts in a transaction with a read-back, since MySQL has no `RETURNING`\n\n## Validation & docs\n\n- Added a constructor check that rejects sessions and users tables with the same name\n- Documented driver support, recommended `userId` index, and `ON DELETE CASCADE` behavior in the README\n- Documented a recommended `lastVerifiedAt` index for `deleteExpiredSessions` sweeps\n\n## Expired session cleanup & hash type guard\n\n- Added `deleteExpiredSessions(olderThan)` to the adapter, deleting sessions whose `lastVerifiedAt` is at or before the cutoff and returning the deleted count\n- Updated the non-binary `secretHash` check to fail closed: a session stored with a TEXT `secretHash` column is treated as invalid instead of surfacing an `AdapterError`, which an attacker could otherwise use to probe which session ids exist\n\n### Error wrapping via `.catch()`\n\n- Reorganized the MySQL, PostgreSQL and SQLite driver methods to wrap failures with `.catch()` instead of `try/catch`\n"
+    filename: 2026-08-01-cde458c.md
     v: 0.0.0
-  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: minor\n---\n\n## Replace module augmentation with generics\n\n- Use generics instead of module augmentation to define session attributes.\n- Fix usage section in README.md\n"
-    filename: 2026-07-25-mrzlyf48.md
+  - content: "---\npackages:\n  npm:@nyx-auth/drizzle-adapter:\n    type: minor\n---\n\n## User table support & session-user join\n\n- Added `users` table support across all three drivers (SQLite, PostgreSQL, MySQL)\n- Implemented user CRUD operations: `insertUser`, `findUserById`, `updateUserbyId`, `deleteUserById`\n- Implemented `findSessionWithUserById` using `INNER JOIN` for combined session+user lookup\n- Exported user table type helpers: `SQLiteUserTable`, `PgUserTable`, `MySQLUserTable`\n- Updated static factory methods to require `tables: { sessions, users }`\n- Added comprehensive README with table schema examples and type inference guide\n"
+    filename: 2026-07-27-feat-user-management-drizzle.md
     v: 0.0.0
-  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: minor\n---\n\n## Refactor nyx types and mapper for better DX & add updateSessionAttributes method\n\n- Refactored `Attributes` to a `{ select, insert }` generic shape and updated `Adapter`, `DatabaseSession`, `Session`, and related types accordingly\n- Renamed `getSessionAttributes` to `mapSessionAttributes` for clarity\n- Added `$inferSession` type inference getter\n- Added `updateSessionAttributes(sessionId, attributes)` method\n- `createSession` now returns `{ token, value: Session<Select> }` instead of `SessionWithToken`\n- Exported `AdapterError` and `Attributes` from package entry\n- Updated README example to reflect new API\n"
-    filename: 2026-07-25-ms0uy441.md
+  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: minor\n---\n\n## Namespaced API & user management\n\n- Reorganized core into namespaced `nyx.session.*` and `nyx.user.*` APIs\n- Added the `nyx.user` API: `create`, `get`, `updateAttributes`, `delete` and `$infer`\n- Added `$infer` type getter to `nyx.session`\n\n## Security hardening of session validation\n\n- Made `validateToken` timing-safe by comparing against a fixed dummy hash, equalizing the hashing work of the \"session not found\" and \"wrong secret\" paths\n- Added session token format validation before any database lookup\n- Increased session id/secret length to 32 bytes\n- Narrowed the session-id existence timing oracle: the dummy-hash comparison equalizes hashing work, though the database lookup cost still differs between found and missing sessions\n\n## Required attribute mappers\n\n- Made `session.mapSessionAttributes` and `user.mapUserAttributes` required — they strip sensitive columns (e.g. `passwordHash`) from the values exposed to the application\n- Stripped reserved columns (`id`, `userId`, `secretHash`, `createdAt`, `lastVerifiedAt`) from session and user inserts\n\n## Adapter contract changes\n\n- Removed `findSessionById` from the `Adapter` interface — only the session+user join is used\n- Changed `deleteSessionById` and `deleteSessionsByUserId` to return whether a row was deleted\n- Changed `nyx.session.invalidate` and `invalidateAll` to return `boolean`\n- Removed `nyx.session.get`\n\n## Validation & docs\n\n- Added `session.now` option to inject the clock for deterministic time in tests\n- Added `TimeSpan` constructor validation for non-finite values and millisecond overflow\n- Added `Nyx` constructor validation for `inactivityTimeout` and `activityCheckInterval` values\n- Documented the full API with JSDoc\n- Documented that `nyx.session.updateAttributes` ignores `undefined` fields — pass `null` to clear a column\n\n## Session expiration sweep\n\n- Added `nyx.session.invalidateExpiredSessions` to delete sessions that have exceeded the inactivity timeout\n\n### Error wrapping via `.catch()`\n\n- Reorganized `validateToken`, `invalidate`, `invalidateExpiredSessions` and `invalidateAll` to wrap failures with `.catch()` instead of `try/catch`\n"
+    filename: 2026-08-01-f74936a.md
+    v: 0.0.0
+  - content: "---\npackages:\n  npm:@nyx-auth/core:\n    type: minor\n---\n\n## Namespaced API & user management\n\n- Reorganized core into namespaced `nyx.session.*` and `nyx.user.*` APIs\n- Added user management (`create`, `get`, `updateAttributes`, `delete`)\n- Added `DatabaseUser` interface to adapter contract\n- Added `findSessionWithUserById` to adapter interface\n- `validateToken` now returns `{ session, user }` combined object\n- Extracted `UnexpectedError` into dedicated module with direct `cause` constructor\n- Extracted crypto utilities (`generateSessionId`, `hashSecret`, `constantTimeEqual`) into `utils/crypto.ts`\n- Renamed `$inferSession` to `nyx.session.$infer` and added `nyx.user.$infer`\n- Expanded README with full API reference, error handling, and custom adapter guide\n"
+    filename: 2026-07-27-feat-user-management-core.md
     v: 0.0.0
 core:packages:
   - id: npm:nyx-auth
     updated: false
+  - id: npm:hono-bun
+    updated: false
   - id: npm:@nyx-auth/tsconfig
     updated: false
   - changelogIds:
-      - 2026-07-25-ms0utrwl.md
+      - 2026-08-01-cde458c.md
+      - 2026-07-27-feat-user-management-drizzle.md
     id: npm:@nyx-auth/drizzle-adapter
     updated: true
-  - id: npm:hono-bun
-    updated: false
   - changelogIds:
-      - 2026-07-25-mrzlyf48.md
-      - 2026-07-25-ms0uy441.md
+      - 2026-08-01-f74936a.md
+      - 2026-07-27-feat-user-management-core.md
     id: npm:@nyx-auth/core
     updated: true
 npm:packages:
   - id: npm:nyx-auth
+  - id: npm:hono-bun
   - id: npm:@nyx-auth/tsconfig
   - id: npm:@nyx-auth/drizzle-adapter
-  - id: npm:hono-bun
   - id: npm:@nyx-auth/core
