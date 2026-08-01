@@ -14,6 +14,19 @@ const SESSION_TOKEN_PATTERN = /^[a-kmnp-z2-9]{20,64}\.[a-kmnp-z2-9]{20,64}$/;
 // the real comparison.
 const DUMMY_SECRET_HASH = new Uint8Array(32);
 
+/**
+ * The session API, accessed through `nyx.session.*` on a {@link Nyx} instance.
+ *
+ * Handles creating, validating, invalidating and updating sessions. Public
+ * methods never throw — on failure they return an {@link UnexpectedError}
+ * instead. Check with `result instanceof Error`.
+ *
+ * @typeParam Select - Session attributes as stored in the database.
+ * @typeParam Insert - Session attributes accepted when creating a session.
+ * @typeParam SessionAttrs - Session attributes exposed to the application.
+ * @typeParam UserSelect - User attributes as stored in the database.
+ * @typeParam UserAttrs - User attributes exposed to the application.
+ */
 export class SessionAPI<
 	Select extends object = object,
 	Insert extends object = object,
@@ -41,10 +54,47 @@ export class SessionAPI<
 		this.mapUserAttributes = mapUserAttributes;
 	}
 
+	/**
+	 * The inferred shape of sessions handled by this instance.
+	 *
+	 * Use `typeof nyx.session.$infer` to derive the session type:
+	 *
+	 * ```ts
+	 * import { nyx } from "./nyx";
+	 *
+	 * export type Session = typeof nyx.session.$infer;
+	 * ```
+	 */
 	get $infer(): Session<SessionAttrs> {
 		return {} as Session<SessionAttrs>;
 	}
 
+	/**
+	 * Creates a new session for a user and returns the session token and value.
+	 *
+	 * The token is the credential to give to the client (e.g. via a cookie) —
+	 * it contains the session secret and can only be seen once. The session
+	 * value is the public shape exposed to the application.
+	 *
+	 * ### Example
+	 *
+	 * ```ts
+	 * const result = await nyx.session.create(userId, { ipAddress: "127.0.0.1" });
+	 * if (result instanceof Error) {
+	 * 	// handle UnexpectedError
+	 * }
+	 * setCookie(c, "session", result.token, {
+	 * 	httpOnly: true,
+	 * 	secure: true,
+	 * 	sameSite: "Lax",
+	 * 	path: "/",
+	 * });
+	 * ```
+	 *
+	 * @param userId - The id of the user the session belongs to.
+	 * @param attributes - Session attributes to store.
+	 * @returns The session token and value, or an {@link UnexpectedError} on failure.
+	 */
 	async create(userId: string, attributes: Insert): Promise<{ token: string; value: Session<SessionAttrs> } | UnexpectedError> {
 		try {
 			const now = new Date();
@@ -76,6 +126,30 @@ export class SessionAPI<
 		}
 	}
 
+	/**
+	 * Validates a session token and returns the session and its user.
+	 *
+	 * - Returns `null` when the token is malformed, the session does not
+	 *   exist, the secret is wrong, or the session has expired.
+	 * - Deletes expired sessions and refreshes `lastVerifiedAt` when the
+	 *   {@link NyxOptions.session.activityCheckInterval} has elapsed.
+	 *
+	 * ### Example
+	 *
+	 * ```ts
+	 * const result = await nyx.session.validateToken(token);
+	 * if (result instanceof Error) {
+	 * 	// handle UnexpectedError
+	 * }
+	 * if (!result) {
+	 * 	// not authenticated
+	 * }
+	 * const { session, user } = result;
+	 * ```
+	 *
+	 * @param token - The session token, e.g. read from a cookie.
+	 * @returns The validated session and its user, `null` if invalid, or an {@link UnexpectedError} on failure.
+	 */
 	async validateToken(token: string): Promise<{ session: Session<SessionAttrs>; user: User<UserAttrs> } | null | UnexpectedError> {
 		try {
 			return await this.validateTokenInternal(token);
@@ -147,6 +221,21 @@ export class SessionAPI<
 		};
 	}
 
+	/**
+	 * Deletes a session by its id.
+	 *
+	 * ### Example
+	 *
+	 * ```ts
+	 * const result = await nyx.session.validateToken(token);
+	 * if (result && !(result instanceof Error)) {
+	 * 	await nyx.session.invalidate(result.session.id);
+	 * }
+	 * ```
+	 *
+	 * @param id - The id of the session to delete.
+	 * @returns `true` if the session was deleted, `false` if it did not exist, or an {@link UnexpectedError} on failure.
+	 */
 	async invalidate(id: string): Promise<boolean | UnexpectedError> {
 		try {
 			const result = await this.adapter.deleteSessionById(id);
@@ -159,6 +248,14 @@ export class SessionAPI<
 		}
 	}
 
+	/**
+	 * Deletes all sessions belonging to a user.
+	 *
+	 * Use this for "sign out everywhere" or when a user is deleted.
+	 *
+	 * @param userId - The id of the user whose sessions to delete.
+	 * @returns `true` if at least one session was deleted, `false` otherwise, or an {@link UnexpectedError} on failure.
+	 */
 	async invalidateAll(userId: string): Promise<boolean | UnexpectedError> {
 		try {
 			const result = await this.adapter.deleteSessionsByUserId(userId);
@@ -171,6 +268,14 @@ export class SessionAPI<
 		}
 	}
 
+	/**
+	 * Updates the attributes of a session.
+	 *
+	 * @param sessionId - The id of the session to update.
+	 * @param attributes - The attributes to update. Reserved columns (`id`,
+	 * `userId`, `secretHash`, `createdAt`, `lastVerifiedAt`) are ignored.
+	 * @returns `undefined` on success, or an {@link UnexpectedError} on failure.
+	 */
 	async updateAttributes(sessionId: string, attributes: Partial<Select>): Promise<undefined | UnexpectedError> {
 		try {
 			const result = await this.adapter.updateSessionbyId(sessionId, {

@@ -122,6 +122,15 @@ type UserBaseColumns = {
 	}>;
 };
 
+/**
+ * A PostgreSQL session table definition.
+ *
+ * Requires base columns `id`, `userId`, `secretHash`, `createdAt` and
+ * `lastVerifiedAt`; any additional columns are treated as session
+ * attributes.
+ *
+ * @typeParam A - The session attribute columns, inferred from your table.
+ */
 export type PgSessionTable<A extends Record<string, any> = Record<never, never>> = PgTableWithColumns<{
 	dialect: "pg";
 	columns: BaseColumns & { [K in keyof A as K extends keyof BaseColumns ? never : K]: AttributeColumn<A[K]> };
@@ -129,6 +138,14 @@ export type PgSessionTable<A extends Record<string, any> = Record<never, never>>
 	name: any;
 }>;
 
+/**
+ * A PostgreSQL user table definition.
+ *
+ * Requires a base `id` column; any additional columns are treated as user
+ * attributes.
+ *
+ * @typeParam A - The user attribute columns, inferred from your table.
+ */
 export type PgUserTable<A extends Record<string, any> = Record<never, never>> = PgTableWithColumns<{
 	dialect: "pg";
 	columns: UserBaseColumns & { [K in keyof A as K extends keyof UserBaseColumns ? never : K]: AttributeColumn<A[K]> };

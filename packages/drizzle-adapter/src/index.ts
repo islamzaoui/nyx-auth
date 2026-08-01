@@ -1,3 +1,41 @@
+/**
+ * @packageDocumentation
+ *
+ * Drizzle ORM adapter for {@link "@nyx-auth/core"!Nyx}.
+ *
+ * Supports SQLite, PostgreSQL and MySQL. Pick the factory matching your
+ * database — each one infers your session/user attribute types from your
+ * table definitions, so no explicit generics are needed.
+ *
+ * ### Installation
+ *
+ * ```sh
+ * bun add @nyx-auth/core @nyx-auth/drizzle-adapter drizzle-orm
+ * ```
+ *
+ * ### SQLite example
+ *
+ * ```ts
+ * import { Nyx } from "@nyx-auth/core";
+ * import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
+ * import { db } from "./db";
+ * import { sessions, users } from "./db/schema";
+ *
+ * export const nyx = new Nyx({
+ * 	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
+ * 	user: {
+ * 		mapUserAttributes: (attributes) => ({
+ * 			email: attributes.email,
+ * 		}),
+ * 	},
+ * 	session: {
+ * 		mapSessionAttributes: (attributes) => ({
+ * 			ipAddress: attributes.ipAddress,
+ * 		}),
+ * 	},
+ * });
+ * ```
+ */
 import type { Adapter, AdapterError, Attributes, DatabaseSession, DatabaseUser } from "@nyx-auth/core";
 import type { MySqlDatabase } from "drizzle-orm/mysql-core";
 import type { PgDatabase } from "drizzle-orm/pg-core";
@@ -59,9 +97,29 @@ type DrizzleAdapterConfig =
 			tables: { sessions: MySQLSessionTable; users: MySQLUserTable };
 	  };
 
+/**
+ * A Drizzle ORM {@link Adapter} for nyx-auth.
+ *
+ * Use the static factories {@link DrizzleAdapter.sqlite},
+ * {@link DrizzleAdapter.postgres} and {@link DrizzleAdapter.mysql} instead of
+ * the constructor — they infer your attribute types from your table
+ * definitions.
+ *
+ * @typeParam A - Session {@link Attributes}, inferred from the session table.
+ * @typeParam UA - User {@link Attributes}, inferred from the user table.
+ */
 export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attributes = Attributes> implements Adapter<A, UA> {
 	private driver: Adapter<A, UA>;
 
+	/**
+	 * Creates a drizzle adapter for the given database and tables.
+	 *
+	 * Prefer the static factories ({@link DrizzleAdapter.sqlite},
+	 * {@link DrizzleAdapter.postgres}, {@link DrizzleAdapter.mysql}), which
+	 * infer the session and user attribute types from your table definitions.
+	 *
+	 * @param config - The dialect, database instance and tables to use.
+	 */
 	constructor(config: DrizzleAdapterConfig) {
 		if (config.dialect === "sqlite") {
 			this.driver = createSQLiteAdapter<A, UA>(
@@ -84,6 +142,25 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		}
 	}
 
+	/**
+	 * Creates a SQLite adapter. The session and user attribute types are
+	 * inferred from your table definitions.
+	 *
+	 * ### Example
+	 *
+	 * ```ts
+	 * import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
+	 * import { db } from "./db";
+	 * import { sessions, users } from "./db/schema";
+	 *
+	 * const adapter = DrizzleAdapter.sqlite({ db, tables: { sessions, users } });
+	 * ```
+	 *
+	 * @param config - The database instance and session/user tables.
+	 * @typeParam T - The session table type.
+	 * @typeParam U - The user table type.
+	 * @returns A `DrizzleAdapter` typed to the tables' attributes.
+	 */
 	static sqlite<T extends SQLiteSessionTable, U extends SQLiteUserTable>(config: {
 		db: BaseSQLiteDatabase<"async" | "sync", any, any, any>;
 		tables: { sessions: T; users: U };
@@ -94,6 +171,25 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		>;
 	}
 
+	/**
+	 * Creates a PostgreSQL adapter. The session and user attribute types are
+	 * inferred from your table definitions.
+	 *
+	 * ### Example
+	 *
+	 * ```ts
+	 * import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
+	 * import { db } from "./db";
+	 * import { sessions, users } from "./db/schema";
+	 *
+	 * const adapter = DrizzleAdapter.postgres({ db, tables: { sessions, users } });
+	 * ```
+	 *
+	 * @param config - The database instance and session/user tables.
+	 * @typeParam T - The session table type.
+	 * @typeParam U - The user table type.
+	 * @returns A `DrizzleAdapter` typed to the tables' attributes.
+	 */
 	static postgres<T extends PgSessionTable, U extends PgUserTable>(config: {
 		db: PgDatabase<any, any, any>;
 		tables: { sessions: T; users: U };
@@ -104,6 +200,25 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		>;
 	}
 
+	/**
+	 * Creates a MySQL adapter. The session and user attribute types are
+	 * inferred from your table definitions.
+	 *
+	 * ### Example
+	 *
+	 * ```ts
+	 * import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
+	 * import { db } from "./db";
+	 * import { sessions, users } from "./db/schema";
+	 *
+	 * const adapter = DrizzleAdapter.mysql({ db, tables: { sessions, users } });
+	 * ```
+	 *
+	 * @param config - The database instance and session/user tables.
+	 * @typeParam T - The session table type.
+	 * @typeParam U - The user table type.
+	 * @returns A `DrizzleAdapter` typed to the tables' attributes.
+	 */
 	static mysql<T extends MySQLSessionTable, U extends MySQLUserTable>(config: {
 		db: MySqlDatabase<any, any, any>;
 		tables: { sessions: T; users: U };
