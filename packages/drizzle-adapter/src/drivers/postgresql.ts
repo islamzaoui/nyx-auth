@@ -249,7 +249,7 @@ class PostgresCoreAdapter<A extends Attributes, UA extends Attributes> implement
 
 	async findUserById(userId: string): Promise<DatabaseUser<UA["select"]> | null | AdapterError> {
 		try {
-			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId));
+			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId)).limit(1);
 			if (!row) return null;
 			return mapRowToUser<UA["select"]>(row);
 		} catch (cause) {
@@ -286,7 +286,8 @@ class PostgresCoreAdapter<A extends Attributes, UA extends Attributes> implement
 				.select()
 				.from(this.sessionTable)
 				.innerJoin(this.userTable, eq(this.sessionTable.userId, this.userTable.id))
-				.where(eq(this.sessionTable.id, sessionId))) as Record<string, Record<string, unknown>>[];
+				.where(eq(this.sessionTable.id, sessionId))
+				.limit(1)) as Record<string, Record<string, unknown>>[];
 			if (!row) return null;
 
 			const sessionTableName = getTableName(this.sessionTable);

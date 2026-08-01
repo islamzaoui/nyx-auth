@@ -1,9 +1,11 @@
 import type { Adapter, Attributes, DatabaseSession } from "../adapter";
+import type { Nyx, NyxOptions } from "../core";
 import { UnexpectedError } from "../errors";
 import type { TimeSpan } from "../time-span";
 import { stripSessionReservedAttributes } from "../utils/attributes";
 import { constantTimeEqual, generateSessionId, hashSecret } from "../utils/crypto";
 import type { Session, User } from "../utils/types";
+import type { UserAPI } from "./user";
 
 const SESSION_TOKEN_PATTERN = /^[a-kmnp-z2-9]{20,64}\.[a-kmnp-z2-9]{20,64}$/;
 
@@ -205,18 +207,19 @@ export class SessionAPI<
 
 		let lastVerifiedAt = dbSession.lastVerifiedAt;
 		if (this.activityCheckInterval.elapsedSince(dbSession.lastVerifiedAt, now)) {
-			lastVerifiedAt = now;
 			const result = await this.adapter.updateSessionbyId(dbSession.id, { lastVerifiedAt: now });
-			if (result instanceof Error) {
-				return new UnexpectedError(result);
+			// The refresh is a best-effort write: if it fails, the session
+			// stays valid and keeps its previous lastVerifiedAt.
+			if (!(result instanceof Error)) {
+				lastVerifiedAt = now;
 			}
 		}
 
 		return {
 			session: this.toPublicSession(dbSession, lastVerifiedAt),
 			user: {
-				id: dbUser.id,
 				...this.mapUserAttributes(dbUser.attributes),
+				id: dbUser.id,
 			},
 		};
 	}
@@ -251,7 +254,8 @@ export class SessionAPI<
 	/**
 	 * Deletes all sessions belonging to a user.
 	 *
-	 * Use this for "sign out everywhere" or when a user is deleted.
+	 * Use this for "sign out everywhere". Note that
+	 * {@link UserAPI#delete} already invalidates the user's sessions.
 	 *
 	 * @param userId - The id of the user whose sessions to delete.
 	 * @returns `true` if at least one session was deleted, `false` otherwise, or an {@link UnexpectedError} on failure.
@@ -312,12 +316,14 @@ export class SessionAPI<
 	}
 
 	private toPublicSession(session: DatabaseSession<Select>, lastVerifiedAt: Date = session.lastVerifiedAt): Session<SessionAttrs> {
+		// The mapped attributes are spread first so they can never override the
+		// base fields managed by nyx-auth (id, userId, createdAt, lastVerifiedAt).
 		return {
+			...this.mapSessionAttributes(session.attributes),
 			id: session.id,
 			userId: session.userId,
 			createdAt: session.createdAt,
 			lastVerifiedAt,
-			...this.mapSessionAttributes(session.attributes),
 		};
 	}
 }

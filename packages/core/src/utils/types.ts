@@ -1,3 +1,5 @@
+import type { NyxOptions } from "../core";
+
 /**
  * A session as exposed to the application.
  *

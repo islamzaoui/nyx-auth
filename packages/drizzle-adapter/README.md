@@ -107,6 +107,21 @@ export const users = sqliteTable("users", {
 
 For PostgreSQL and MySQL, use the corresponding column types from `drizzle-orm/pg-core` and `drizzle-orm/mysql-core`.
 
+### Recommended indexes
+
+Index the session table's `userId` column — it is used to delete all of a user's sessions and to join sessions with users, so leaving it unindexed causes a table scan on every `validateToken` call and every sign-out:
+
+```ts
+// drizzle-orm/sqlite-core
+sqliteTable(
+    "sessions",
+    {
+        // ...columns
+    },
+    (t) => [index("sessions_user_id_idx").on(t.userId)],
+);
+```
+
 ## Type inference
 
 The adapter automatically infers your custom attribute types from the drizzle table definitions, so no manual type annotations are needed.

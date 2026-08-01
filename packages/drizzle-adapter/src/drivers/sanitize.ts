@@ -6,6 +6,7 @@ export function stripSessionReservedAttributes<A extends Record<string, any>>(at
 	for (const key of SESSION_RESERVED_KEYS) {
 		delete result[key];
 	}
+	dropUndefinedValues(result);
 	return result as A;
 }
 
@@ -14,5 +15,14 @@ export function stripUserReservedAttributes<A extends Record<string, any>>(attri
 	for (const key of USER_RESERVED_KEYS) {
 		delete result[key];
 	}
+	dropUndefinedValues(result);
 	return result as A;
+}
+
+function dropUndefinedValues(values: Record<string, unknown>): void {
+	for (const [key, value] of Object.entries(values)) {
+		if (value === undefined) {
+			delete values[key];
+		}
+	}
 }

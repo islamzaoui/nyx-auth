@@ -1,3 +1,5 @@
+import type { NyxOptions } from "./core";
+
 /**
  * The unit of a {@link TimeSpan}.
  */

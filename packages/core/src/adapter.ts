@@ -1,3 +1,5 @@
+import type { SessionAPI } from "./api/session";
+
 /**
  * Describes the two shapes of an entity's attributes: how they are stored
  * (`select`) and how they are provided when inserting (`insert`).
@@ -146,7 +148,7 @@ export interface Adapter<A extends Attributes = Attributes, UA extends Attribute
 	/**
 	 * Fetches a session and its user by the session id.
 	 *
-	 * This is used by {@link SessionAPI.validateToken} and should join the
+	 * This is used by {@link SessionAPI#validateToken} and should join the
 	 * session and user tables in a single query.
 	 *
 	 * @param sessionId - The id of the session to fetch.

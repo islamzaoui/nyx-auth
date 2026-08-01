@@ -41,7 +41,7 @@ export interface NyxOptions<
 		 * exposed to the application.
 		 *
 		 * Use this to strip sensitive columns (e.g. IP address, device name)
-		 * from the values returned by {@link SessionAPI.validateToken}.
+		 * from the values returned by {@link SessionAPI#validateToken}.
 		 */
 		mapSessionAttributes: (databaseSessionAttributes: SessionSelect) => SessionAttrs;
 	};

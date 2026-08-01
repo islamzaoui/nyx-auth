@@ -1,4 +1,5 @@
 import type { Adapter, Attributes } from "../adapter";
+import type { Nyx } from "../core";
 import { UnexpectedError } from "../errors";
 import { stripUserReservedAttributes } from "../utils/attributes";
 import type { User } from "../utils/types";
@@ -77,8 +78,8 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 			}
 
 			return {
-				id: insertResult.id,
 				...this.mapUserAttributes(insertResult.attributes),
+				id: insertResult.id,
 			};
 		} catch (cause) {
 			return new UnexpectedError(cause);
@@ -113,8 +114,8 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 			if (!user) return null;
 
 			return {
-				id: user.id,
 				...this.mapUserAttributes(user.attributes),
+				id: user.id,
 			};
 		} catch (cause) {
 			return new UnexpectedError(cause);
@@ -144,13 +145,22 @@ export class UserAPI<Select extends object = object, Insert extends object = obj
 	}
 
 	/**
-	 * Deletes a user by its id.
+	 * Deletes a user by its id and invalidates all of their sessions.
+	 *
+	 * Sessions are deleted first; if that fails, the user is left untouched
+	 * so the operation can be retried. If it succeeds but deleting the user
+	 * fails, the user remains with no active sessions.
 	 *
 	 * @param id - The id of the user to delete.
 	 * @returns `undefined` on success, or an {@link UnexpectedError} on failure.
 	 */
 	async delete(id: string): Promise<undefined | UnexpectedError> {
 		try {
+			const sessionsResult = await this.adapter.deleteSessionsByUserId(id);
+			if (sessionsResult instanceof Error) {
+				return new UnexpectedError(sessionsResult);
+			}
+
 			const result = await this.adapter.deleteUserById(id);
 			if (result instanceof Error) {
 				return new UnexpectedError(result);

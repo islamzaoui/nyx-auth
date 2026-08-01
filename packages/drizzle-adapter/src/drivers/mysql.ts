@@ -174,16 +174,24 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 	async insertSession(session: DatabaseSession<A["insert"]>): Promise<DatabaseSession<A["select"]> | AdapterError> {
 		try {
-			await this.db.insert(this.sessionTable).values({
-				id: session.id,
-				userId: session.userId,
-				secretHash: session.secretHash,
-				createdAt: session.createdAt,
-				lastVerifiedAt: session.lastVerifiedAt,
-				...stripSessionReservedAttributes(session.attributes),
+			// MySQL has no RETURNING, so the inserted row is read back. The
+			// read-back is done inside the same transaction so a concurrent
+			// delete or replica lag cannot make it miss the inserted row.
+			const row = await this.db.transaction(async (tx) => {
+				await tx.insert(this.sessionTable).values({
+					id: session.id,
+					userId: session.userId,
+					secretHash: session.secretHash,
+					createdAt: session.createdAt,
+					lastVerifiedAt: session.lastVerifiedAt,
+					...stripSessionReservedAttributes(session.attributes),
+				});
+				const [inserted] = await tx.select().from(this.sessionTable).where(eq(this.sessionTable.id, session.id)).limit(1);
+				if (!inserted) {
+					throw new Error("Failed to retrieve inserted session");
+				}
+				return inserted;
 			});
-			const [row] = await this.db.select().from(this.sessionTable).where(eq(this.sessionTable.id, session.id));
-			if (!row) return new AdapterError({ operation: "insertSession", cause: new Error("Failed to retrieve inserted session") });
 			return mapRowToSession<A["select"]>(row);
 		} catch (cause) {
 			return new AdapterError({ operation: "insertSession", cause });
@@ -231,12 +239,17 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 	async insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError> {
 		try {
-			await this.db.insert(this.userTable).values({
-				id: user.id,
-				...stripUserReservedAttributes(user.attributes),
+			const row = await this.db.transaction(async (tx) => {
+				await tx.insert(this.userTable).values({
+					id: user.id,
+					...stripUserReservedAttributes(user.attributes),
+				});
+				const [inserted] = await tx.select().from(this.userTable).where(eq(this.userTable.id, user.id)).limit(1);
+				if (!inserted) {
+					throw new Error("Failed to retrieve inserted user");
+				}
+				return inserted;
 			});
-			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, user.id));
-			if (!row) return new AdapterError({ operation: "insertUser", cause: new Error("Failed to retrieve inserted user") });
 			return mapRowToUser<UA["select"]>(row);
 		} catch (cause) {
 			return new AdapterError({ operation: "insertUser", cause });
@@ -245,7 +258,7 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 	async findUserById(userId: string): Promise<DatabaseUser<UA["select"]> | null | AdapterError> {
 		try {
-			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId));
+			const [row] = await this.db.select().from(this.userTable).where(eq(this.userTable.id, userId)).limit(1);
 			if (!row) return null;
 			return mapRowToUser<UA["select"]>(row);
 		} catch (cause) {
@@ -282,7 +295,8 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 				.select()
 				.from(this.sessionTable)
 				.innerJoin(this.userTable, eq(this.sessionTable.userId, this.userTable.id))
-				.where(eq(this.sessionTable.id, sessionId))) as Record<string, Record<string, unknown>>[];
+				.where(eq(this.sessionTable.id, sessionId))
+				.limit(1)) as Record<string, Record<string, unknown>>[];
 			if (!row) return null;
 
 			const sessionTableName = getTableName(this.sessionTable);
