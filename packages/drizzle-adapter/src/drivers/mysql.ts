@@ -1,7 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
-import { eq, getTableName } from "drizzle-orm";
+import { eq, getTableName, lte } from "drizzle-orm";
 import type { MySqlColumn, MySqlDatabase, MySqlTableWithColumns } from "drizzle-orm/mysql-core";
-import { stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
+import { assertSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = MySqlColumn<{
 	dataType: any;
@@ -237,6 +237,15 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 		}
 	}
 
+	async deleteExpiredSessions(olderThan: Date): Promise<number | AdapterError> {
+		try {
+			const result = await this.db.delete(this.sessionTable).where(lte(this.sessionTable.lastVerifiedAt, olderThan));
+			return affectedRows(result);
+		} catch (cause) {
+			return new AdapterError({ operation: "deleteExpiredSessions", cause });
+		}
+	}
+
 	async insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError> {
 		try {
 			const row = await this.db.transaction(async (tx) => {
@@ -318,6 +327,7 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 function mapRowToSession<A extends Record<string, any>>(row: Record<string, any>): DatabaseSession<A> {
 	const { id, userId, secretHash, createdAt, lastVerifiedAt, ...attributes } = row;
+	assertSecretHash(secretHash);
 	return {
 		id,
 		userId,

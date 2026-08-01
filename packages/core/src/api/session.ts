@@ -253,6 +253,29 @@ export class SessionAPI<
 	}
 
 	/**
+	 * Deletes all expired sessions.
+	 *
+	 * A session is expired when it has exceeded the inactivity timeout — the
+	 * same check used during validation. Expired sessions are normally only
+	 * deleted lazily when their token is re-presented, so call this regularly
+	 * (e.g. on a cron job) to stop stale rows from accumulating.
+	 *
+	 * @returns The number of sessions deleted, or an {@link UnexpectedError} on failure.
+	 */
+	async invalidateExpiredSessions(): Promise<number | UnexpectedError> {
+		try {
+			const olderThan = new Date(this.now().getTime() - this.inactivityTimeout.milliseconds());
+			const result = await this.adapter.deleteExpiredSessions(olderThan);
+			if (result instanceof Error) {
+				return new UnexpectedError(result);
+			}
+			return result;
+		} catch (cause) {
+			return new UnexpectedError(cause);
+		}
+	}
+
+	/**
 	 * Deletes all sessions belonging to a user.
 	 *
 	 * Use this for "sign out everywhere". Note that

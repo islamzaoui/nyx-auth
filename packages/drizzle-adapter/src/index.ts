@@ -252,6 +252,10 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 		return this.driver.deleteSessionsByUserId(userId);
 	}
 
+	deleteExpiredSessions(olderThan: Date): Promise<number | AdapterError> {
+		return this.driver.deleteExpiredSessions(olderThan);
+	}
+
 	insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError> {
 		return this.driver.insertUser(user);
 	}

@@ -26,3 +26,18 @@ function dropUndefinedValues(values: Record<string, unknown>): void {
 		}
 	}
 }
+
+/**
+ * Throws unless the session secret hash was stored as a binary column.
+ *
+ * nyx-auth compares hashes byte-wise, so a `secretHash` stored as TEXT (e.g.
+ * base64 or hex) would fail every validation with a confusing error. This
+ * check surfaces the schema misconfiguration as a clear {@link AdapterError}
+ * instead of silently breaking authentication.
+ */
+export function assertSecretHash(secretHash: unknown): asserts secretHash is Uint8Array {
+	if (!(secretHash instanceof Uint8Array)) {
+		const received = secretHash === null ? "null" : typeof secretHash;
+		throw new Error(`session secretHash must be stored as a binary column (Uint8Array / Buffer), got ${received}`);
+	}
+}

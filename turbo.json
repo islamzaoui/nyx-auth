@@ -13,7 +13,7 @@
 		},
 		"typecheck": {
 			"dependsOn": ["^typecheck", "build"],
-			"inputs": ["src/**/*.ts"]
+			"inputs": ["**/*.ts"]
 		}
 	},
 	"globalDependencies": ["package.json", "bunfig.toml", "tsconfig*.json", "biome.json"],

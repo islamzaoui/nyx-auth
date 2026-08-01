@@ -1,7 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
-import { eq, getTableName } from "drizzle-orm";
+import { eq, getTableName, lte } from "drizzle-orm";
 import type { PgColumn, PgDatabase, PgTableWithColumns } from "drizzle-orm/pg-core";
-import { stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
+import { assertSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = PgColumn<{
 	dataType: any;
@@ -231,6 +231,18 @@ class PostgresCoreAdapter<A extends Attributes, UA extends Attributes> implement
 		}
 	}
 
+	async deleteExpiredSessions(olderThan: Date): Promise<number | AdapterError> {
+		try {
+			const deleted = await this.db
+				.delete(this.sessionTable)
+				.where(lte(this.sessionTable.lastVerifiedAt, olderThan))
+				.returning({ id: this.sessionTable.id });
+			return deleted.length;
+		} catch (cause) {
+			return new AdapterError({ operation: "deleteExpiredSessions", cause });
+		}
+	}
+
 	async insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError> {
 		try {
 			const [row] = await this.db
@@ -309,6 +321,7 @@ class PostgresCoreAdapter<A extends Attributes, UA extends Attributes> implement
 
 function mapRowToSession<A extends Record<string, any>>(row: Record<string, any>): DatabaseSession<A> {
 	const { id, userId, secretHash, createdAt, lastVerifiedAt, ...attributes } = row;
+	assertSecretHash(secretHash);
 	return {
 		id,
 		userId,

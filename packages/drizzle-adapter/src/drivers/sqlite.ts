@@ -1,7 +1,7 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
-import { eq, getTableName } from "drizzle-orm";
+import { eq, getTableName, lte } from "drizzle-orm";
 import type { BaseSQLiteDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
-import { stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
+import { assertSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = SQLiteColumn<{
 	dataType: any;
@@ -240,6 +240,19 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 		}
 	}
 
+	async deleteExpiredSessions(olderThan: Date): Promise<number | AdapterError> {
+		try {
+			const deleted = await this.db
+				.delete(this.sessionTable)
+				.where(lte(this.sessionTable.lastVerifiedAt, olderThan))
+				.returning({ id: this.sessionTable.id })
+				.all();
+			return deleted.length;
+		} catch (cause) {
+			return new AdapterError({ operation: "deleteExpiredSessions", cause });
+		}
+	}
+
 	async insertUser(user: DatabaseUser<UA["insert"]>): Promise<DatabaseUser<UA["select"]> | AdapterError> {
 		try {
 			const [row] = await this.db
@@ -319,6 +332,7 @@ class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements 
 
 function mapRowToSession<A extends Record<string, any>>(row: Record<string, any>): DatabaseSession<A> {
 	const { id, userId, secretHash, createdAt, lastVerifiedAt, ...attributes } = row;
+	assertSecretHash(secretHash);
 	return {
 		id,
 		userId,

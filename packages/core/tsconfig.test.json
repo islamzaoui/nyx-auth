@@ -1,0 +1,9 @@
+{
+	"extends": "../../shared/tsconfig/tsconfig.base.json",
+	"compilerOptions": {
+		"types": ["bun"],
+		"isolatedDeclarations": false
+	},
+	"include": ["test"],
+	"exclude": ["node_modules", "dist"]
+}
