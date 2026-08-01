@@ -37,6 +37,7 @@
  * ```
  */
 import type { Adapter, AdapterError, Attributes, DatabaseSession, DatabaseUser } from "@nyx-auth/core";
+import { getTableName } from "drizzle-orm";
 import type { MySqlDatabase } from "drizzle-orm/mysql-core";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
@@ -121,6 +122,9 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 	 * @param config - The dialect, database instance and tables to use.
 	 */
 	constructor(config: DrizzleAdapterConfig) {
+		if (getTableName(config.tables.sessions) === getTableName(config.tables.users)) {
+			throw new Error(`DrizzleAdapter: sessions and users tables must have distinct names, both are named "${getTableName(config.tables.sessions)}"`);
+		}
 		if (config.dialect === "sqlite") {
 			this.driver = createSQLiteAdapter<A, UA>(
 				config.db,

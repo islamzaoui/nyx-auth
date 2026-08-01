@@ -39,6 +39,7 @@ export class SessionAPI<
 	private readonly adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, object>>;
 	private readonly inactivityTimeout: TimeSpan;
 	private readonly activityCheckInterval: TimeSpan;
+	private readonly now: () => Date;
 	private readonly mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs;
 	private readonly mapUserAttributes: (databaseUserAttributes: UserSelect) => UserAttrs;
 
@@ -46,12 +47,14 @@ export class SessionAPI<
 		adapter: Adapter<Attributes<Select, Insert>, Attributes<UserSelect, object>>,
 		inactivityTimeout: TimeSpan,
 		activityCheckInterval: TimeSpan,
+		now: () => Date,
 		mapSessionAttributes: (databaseSessionAttributes: Select) => SessionAttrs,
 		mapUserAttributes: (databaseUserAttributes: UserSelect) => UserAttrs
 	) {
 		this.adapter = adapter;
 		this.inactivityTimeout = inactivityTimeout;
 		this.activityCheckInterval = activityCheckInterval;
+		this.now = now;
 		this.mapSessionAttributes = mapSessionAttributes;
 		this.mapUserAttributes = mapUserAttributes;
 	}
@@ -99,7 +102,7 @@ export class SessionAPI<
 	 */
 	async create(userId: string, attributes: Insert): Promise<{ token: string; value: Session<SessionAttrs> } | UnexpectedError> {
 		try {
-			const now = new Date();
+			const now = this.now();
 
 			const id = generateSessionId();
 			const secret = generateSessionId();
@@ -134,7 +137,8 @@ export class SessionAPI<
 	 * - Returns `null` when the token is malformed, the session does not
 	 *   exist, the secret is wrong, or the session has expired.
 	 * - Deletes expired sessions and refreshes `lastVerifiedAt` when the
-	 *   {@link NyxOptions.session.activityCheckInterval} has elapsed.
+	 *   {@link NyxOptions.session.activityCheckInterval} has elapsed. Both
+	 *   are best-effort writes: failures never change the validation result.
 	 *
 	 * ### Example
 	 *
@@ -168,7 +172,7 @@ export class SessionAPI<
 		const sessionSecret = tokenParts[1];
 		if (!sessionId || !sessionSecret) return null;
 
-		const now = new Date();
+		const now = this.now();
 
 		const combined = await this.adapter.findSessionWithUserById(sessionId);
 		if (combined instanceof Error) {
@@ -198,9 +202,6 @@ export class SessionAPI<
 		}
 
 		const activeSession = await this.checkSessionExpiry(dbSession, now);
-		if (activeSession instanceof Error) {
-			return activeSession;
-		}
 		if (!activeSession) {
 			return null;
 		}
@@ -294,12 +295,12 @@ export class SessionAPI<
 		}
 	}
 
-	private async checkSessionExpiry(session: DatabaseSession<Select>, now: Date): Promise<DatabaseSession<Select> | null | UnexpectedError> {
+	private async checkSessionExpiry(session: DatabaseSession<Select>, now: Date): Promise<DatabaseSession<Select> | null> {
 		if (this.inactivityTimeout.elapsedSince(session.lastVerifiedAt, now)) {
-			const deleteResult = await this.adapter.deleteSessionById(session.id);
-			if (deleteResult instanceof Error) {
-				return new UnexpectedError(deleteResult);
-			}
+			// Best-effort cleanup: the session is expired regardless of
+			// whether the deletion write succeeds, so failures are ignored
+			// and the row is retried on the next validation.
+			await this.adapter.deleteSessionById(session.id);
 			return null;
 		}
 		return session;

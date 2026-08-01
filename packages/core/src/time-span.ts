@@ -36,7 +36,8 @@ export class TimeSpan {
 	 *
 	 * @param value - The numeric length of the time span.
 	 * @param unit - The unit of `value`.
-	 * @throws {Error} If `value` is not a finite number.
+	 * @throws {Error} If `value` is not a finite number, or if the span
+	 * overflows the representable millisecond range (e.g. `Infinity`).
 	 */
 	constructor(
 		public readonly value: number,
@@ -44,6 +45,9 @@ export class TimeSpan {
 	) {
 		if (!Number.isFinite(value)) {
 			throw new Error(`TimeSpan: value must be a finite number, got ${value}`);
+		}
+		if (!Number.isFinite(this.milliseconds())) {
+			throw new Error(`TimeSpan: value ${value} ${unit} overflows the representable millisecond range`);
 		}
 	}
 

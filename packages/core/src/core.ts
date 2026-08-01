@@ -37,6 +37,17 @@ export interface NyxOptions<
 		 */
 		activityCheckInterval?: TimeSpan;
 		/**
+		 * Returns the current time used for expiry checks, creation
+		 * timestamps and `lastVerifiedAt` refresh.
+		 *
+		 * Session expiry is wall-clock based, so the default reads the
+		 * system clock. Override this in tests to control time
+		 * deterministically instead of sleeping against the real clock.
+		 *
+		 * @defaultValue `() => new Date()`
+		 */
+		now?: () => Date;
+		/**
 		 * Maps the session attributes stored in the database to the attributes
 		 * exposed to the application.
 		 *
@@ -131,11 +142,13 @@ export class Nyx<
 		}
 
 		const createId = options.user.createId ?? (() => crypto.randomUUID());
+		const now = options.session.now ?? (() => new Date());
 
 		this.session = new SessionAPI(
 			options.adapter,
 			inactivityTimeout,
 			activityCheckInterval,
+			now,
 			options.session.mapSessionAttributes,
 			options.user.mapUserAttributes
 		);

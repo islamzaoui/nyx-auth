@@ -57,6 +57,20 @@ const adapter = new DrizzleAdapter({
 });
 ```
 
+The session and user tables must have **distinct names** — the adapter joins them
+in a single query and looks up the result by table name, so same-named tables
+(e.g. in different schemas) are rejected at construction.
+
+### Driver support
+
+- **MySQL**: inserting sessions/users is done inside a transaction (to read the
+  row back, since MySQL has no `RETURNING`). This requires a
+  transaction-capable driver such as `mysql2` or PlanetScale; proxy-style
+  drivers without transaction support cannot insert.
+- **Delete result reporting** (`invalidate` / `invalidateAll` return values)
+  works with both mysql2-style tuple results and PlanetScale-style object
+  results.
+
 ## Table schema
 
 Your session and user tables **must** include the following base columns. Additional custom attributes are optional.
@@ -77,6 +91,10 @@ export const sessions = sqliteTable("sessions", {
     // ... custom attributes
 });
 ```
+
+The `onDelete: "cascade"` reference is important: sessions whose user row was
+deleted without cascading can never validate (the join finds no user) and are
+not cleaned up automatically — they'd accumulate as orphaned rows.
 
 ### User table (SQLite example)
 

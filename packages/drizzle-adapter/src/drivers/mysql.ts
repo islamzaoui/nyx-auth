@@ -221,8 +221,8 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 	async deleteSessionById(sessionId: string): Promise<boolean | AdapterError> {
 		try {
-			const [result] = await this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId));
-			return (result?.affectedRows ?? 0) > 0;
+			const result = await this.db.delete(this.sessionTable).where(eq(this.sessionTable.id, sessionId));
+			return affectedRows(result) > 0;
 		} catch (cause) {
 			return new AdapterError({ operation: "deleteSessionById", cause });
 		}
@@ -230,8 +230,8 @@ class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements A
 
 	async deleteSessionsByUserId(userId: string): Promise<boolean | AdapterError> {
 		try {
-			const [result] = await this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId));
-			return (result?.affectedRows ?? 0) > 0;
+			const result = await this.db.delete(this.sessionTable).where(eq(this.sessionTable.userId, userId));
+			return affectedRows(result) > 0;
 		} catch (cause) {
 			return new AdapterError({ operation: "deleteSessionsByUserId", cause });
 		}
@@ -334,4 +334,17 @@ function mapRowToUser<A extends Record<string, any>>(row: Record<string, any>): 
 		id,
 		attributes: attributes as A,
 	};
+}
+
+// MySQL drivers report affected rows differently: the mysql2 driver returns a
+// `[ResultSetHeader, FieldPacket[]]` tuple (affectedRows on the header), while
+// other drivers (e.g. PlanetScale) return a plain object with `affectedRows`
+// or `rowsAffected`. Normalize both shapes so delete results are correct
+// regardless of the driver.
+export function affectedRows(result: unknown): number {
+	if (Array.isArray(result)) {
+		return (result[0] as { affectedRows?: number })?.affectedRows ?? 0;
+	}
+	const objectResult = result as { affectedRows?: number; rowsAffected?: number } | undefined;
+	return objectResult?.affectedRows ?? objectResult?.rowsAffected ?? 0;
 }

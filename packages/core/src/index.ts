@@ -30,8 +30,11 @@
  * });
  *
  * // Create a session and validate it later
- * const { token } = await nyx.session.create(userId, { ipAddress: "127.0.0.1" });
- * const result = await nyx.session.validateToken(token);
+ * const created = await nyx.session.create(userId, { ipAddress: "127.0.0.1" });
+ * if (created instanceof Error) {
+ * 	// handle UnexpectedError
+ * }
+ * const result = await nyx.session.validateToken(created.token);
  * ```
  */
 export { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "./adapter";
