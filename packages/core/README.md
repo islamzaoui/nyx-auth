@@ -25,7 +25,9 @@ const nyx = new Nyx({
         mapSessionAttributes: (attributes) => ({ ipAddress: attributes.ipAddress }),
     },
     user: {
-        mapUserAttributes: ({ passwordHash, ...attributes }) => attributes,
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
     },
 });
 
@@ -52,7 +54,13 @@ if (validated) {
 }
 
 const deleted = await nyx.session.invalidate(sessionId); // false if no session matched
-await nyx.session.invalidateAll(userId); // false if the user had no sessions
+if (deleted instanceof UnexpectedError) {
+    // handle error — the session may not have been revoked
+}
+const allDeleted = await nyx.session.invalidateAll(userId); // false if the user had no sessions
+if (allDeleted instanceof UnexpectedError) {
+    // handle error — sessions may still be active
+}
 await nyx.session.updateAttributes(sessionId, { ipAddress: "..." });
 ```
 
@@ -188,9 +196,14 @@ type Attributes<Select, Insert> = {
 | `adapter`                       | `Adapter`              | (required)            |
 | `session.inactivityTimeout`     | `TimeSpan`             | `10 days`             |
 | `session.activityCheckInterval` | `TimeSpan`             | `1 hour`              |
+| `session.now`                   | `() => Date`           | `() => new Date()`    |
 | `session.mapSessionAttributes`  | `(db) => SessionAttrs` | (required)            |
 | `user.createId`                 | `() => string`         | `crypto.randomUUID()` |
 | `user.mapUserAttributes`        | `(db) => UserAttrs`    | (required)            |
+
+`session.now` returns the current time used for expiry checks, creation
+timestamps and `lastVerifiedAt` refresh. Override it in tests to control time
+deterministically instead of sleeping against the real clock.
 
 ### `nyx.session`
 

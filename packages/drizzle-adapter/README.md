@@ -18,6 +18,16 @@ import { Nyx } from "@nyx-auth/core";
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({
+            ipAddress: attributes.ipAddress,
+        }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 ```
 
@@ -29,6 +39,16 @@ import { Nyx } from "@nyx-auth/core";
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.postgres({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({
+            ipAddress: attributes.ipAddress,
+        }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 ```
 
@@ -40,6 +60,16 @@ import { Nyx } from "@nyx-auth/core";
 
 const nyx = new Nyx({
     adapter: DrizzleAdapter.mysql({ db, tables: { sessions, users } }),
+    session: {
+        mapSessionAttributes: (attributes) => ({
+            ipAddress: attributes.ipAddress,
+        }),
+    },
+    user: {
+        mapUserAttributes: (attributes) => ({
+            email: attributes.email,
+        }),
+    },
 });
 ```
 
@@ -130,7 +160,8 @@ For PostgreSQL and MySQL, use the corresponding column types from `drizzle-orm/p
 Index the session table's `userId` column — it is used to delete all of a user's sessions and to join sessions with users, so leaving it unindexed causes a table scan on every `validateToken` call and every sign-out:
 
 ```ts
-// drizzle-orm/sqlite-core
+import { index, sqliteTable } from "drizzle-orm/sqlite-core";
+
 sqliteTable(
     "sessions",
     {
