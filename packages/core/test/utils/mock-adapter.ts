@@ -60,7 +60,7 @@ export class MockAdapter implements Adapter<MockSessionAttributes, MockUserAttri
 	async insertSession(session: DatabaseSession<Attrs>): Promise<DatabaseSession<Attrs> | AdapterError> {
 		const error = this.guard("insertSession");
 		if (error) return error;
-		this.sessions.set(session.id, session);
+		this.sessions.set(session.id, { ...session, attributes: { ...session.attributes } });
 		return session;
 	}
 
@@ -117,7 +117,7 @@ export class MockAdapter implements Adapter<MockSessionAttributes, MockUserAttri
 	async insertUser(user: DatabaseUser<Attrs>): Promise<DatabaseUser<Attrs> | AdapterError> {
 		const error = this.guard("insertUser");
 		if (error) return error;
-		this.users.set(user.id, user);
+		this.users.set(user.id, { ...user, attributes: { ...user.attributes } });
 		return user;
 	}
 

@@ -125,9 +125,10 @@ describe("nyx.session.validateToken", () => {
 		const nyx = createNyx(adapter);
 
 		const { token } = expectResult(await nyx.session.create("user-1", {}));
-		const [id] = token.split(".");
+		const [id] = token.split(".") as [string];
 		const wrongToken = `${id}.${"b".repeat(32)}`;
 		expect(await nyx.session.validateToken(wrongToken)).toBeNull();
+		expect(adapter.sessions.has(id)).toBe(true);
 	});
 
 	test("deletes an expired session", async () => {

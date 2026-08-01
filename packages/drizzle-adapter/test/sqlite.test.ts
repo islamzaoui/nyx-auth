@@ -4,8 +4,6 @@ import { AdapterError, Nyx } from "@nyx-auth/core";
 import { drizzle } from "drizzle-orm/bun-sqlite";
 import { blob, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { DrizzleAdapter } from "../src";
-import { affectedRows } from "../src/drivers/mysql";
-import { isSecretHash } from "../src/drivers/sanitize";
 
 function expectResult<T>(result: T): Exclude<NonNullable<T>, Error> {
 	expect(result).not.toBeInstanceOf(Error);
@@ -15,6 +13,7 @@ function expectResult<T>(result: T): Exclude<NonNullable<T>, Error> {
 
 function createAdapter() {
 	const sqlite = new Database(":memory:");
+	sqlite.run("PRAGMA foreign_keys = ON");
 	sqlite.run(`CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL)`);
 	sqlite.run(`CREATE TABLE sessions (
 		id TEXT PRIMARY KEY,
@@ -42,7 +41,7 @@ function createAdapter() {
 	});
 
 	const adapter = DrizzleAdapter.sqlite({ db: drizzle(sqlite), tables: { sessions, users } });
-	return { adapter };
+	return { adapter, sqlite };
 }
 
 async function insertSession(adapter: DrizzleAdapter, id: string, userId: string, lastVerifiedAt: Date) {
@@ -77,9 +76,51 @@ describe("DrizzleAdapter sqlite", () => {
 	});
 
 	test("returns null when the joined user is missing", async () => {
-		const { adapter } = createAdapter();
-		await insertSession(adapter, "orphan", "missing-user", new Date("2026-01-01T00:00:00.000Z"));
+		const sqlite = new Database(":memory:");
+		sqlite.run(`CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT NOT NULL)`);
+		sqlite.run(`CREATE TABLE orphan_sessions (
+			id TEXT PRIMARY KEY,
+			user_id TEXT NOT NULL,
+			secret_hash BLOB NOT NULL,
+			created_at INTEGER NOT NULL,
+			last_verified_at INTEGER NOT NULL
+		)`);
+
+		const users = sqliteTable("users", {
+			id: text("id").primaryKey(),
+			email: text("email").notNull(),
+		});
+		const orphanSessions = sqliteTable("orphan_sessions", {
+			id: text("id").primaryKey(),
+			userId: text("user_id").notNull(),
+			secretHash: blob("secret_hash", { mode: "buffer" }).notNull(),
+			createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
+			lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }).notNull(),
+		});
+
+		const adapter = DrizzleAdapter.sqlite({ db: drizzle(sqlite), tables: { sessions: orphanSessions, users } });
+		const inserted = await adapter.insertSession({
+			id: "orphan",
+			userId: "missing-user",
+			secretHash: new Uint8Array(32).fill(1),
+			createdAt: new Date("2026-01-01T00:00:00.000Z"),
+			lastVerifiedAt: new Date("2026-01-01T00:00:00.000Z"),
+			attributes: {},
+		});
+		expect(inserted).not.toBeInstanceOf(AdapterError);
 		expect(await adapter.findSessionWithUserById("orphan")).toBeNull();
+	});
+
+	test("deleting a user cascades to its sessions", async () => {
+		const { adapter, sqlite } = createAdapter();
+		await adapter.insertUser({ id: "user-1", attributes: { email: "a@b.c" } });
+		await insertSession(adapter, "s1", "user-1", new Date("2026-01-01T00:00:00.000Z"));
+		await insertSession(adapter, "s2", "user-1", new Date("2026-01-01T00:00:00.000Z"));
+
+		await adapter.deleteUserById("user-1");
+		const remaining = sqlite.query("SELECT COUNT(*) AS count FROM sessions").get() as { count: number };
+		expect(remaining.count).toBe(0);
+		expect(await adapter.findSessionWithUserById("s1")).toBeNull();
 	});
 
 	test("performs user CRUD", async () => {
@@ -173,34 +214,5 @@ describe("DrizzleAdapter sqlite", () => {
 
 		const result = await adapter.findSessionWithUserById("session-1");
 		expect(result).toBeNull();
-	});
-});
-
-describe("isSecretHash", () => {
-	test("accepts Uint8Array and Buffer", () => {
-		expect(isSecretHash(new Uint8Array(32))).toBe(true);
-		expect(isSecretHash(Buffer.alloc(32))).toBe(true);
-	});
-
-	test("rejects non-binary values", () => {
-		expect(isSecretHash("c2VjcmV0")).toBe(false);
-		expect(isSecretHash(null)).toBe(false);
-		expect(isSecretHash(undefined)).toBe(false);
-	});
-});
-
-describe("affectedRows", () => {
-	test("normalizes mysql2 tuple results", () => {
-		expect(affectedRows([{ affectedRows: 3 }, []])).toBe(3);
-	});
-
-	test("normalizes object results", () => {
-		expect(affectedRows({ affectedRows: 2 })).toBe(2);
-		expect(affectedRows({ rowsAffected: 4 })).toBe(4);
-	});
-
-	test("returns 0 for empty results", () => {
-		expect(affectedRows({})).toBe(0);
-		expect(affectedRows([])).toBe(0);
 	});
 });

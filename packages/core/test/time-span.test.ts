@@ -14,6 +14,7 @@ describe("TimeSpan", () => {
 	test("rejects non-finite values", () => {
 		expect(() => new TimeSpan(Number.NaN, "d")).toThrow();
 		expect(() => new TimeSpan(Number.POSITIVE_INFINITY, "d")).toThrow();
+		expect(() => new TimeSpan(Number.MAX_VALUE, "d")).toThrow();
 	});
 
 	test("elapsedSince returns true once the span has elapsed", () => {

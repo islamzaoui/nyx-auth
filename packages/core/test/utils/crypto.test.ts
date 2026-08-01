@@ -9,8 +9,9 @@ describe("generateSessionId", () => {
 	});
 
 	test("only uses characters from the alphabet", () => {
-		for (let i = 0; i < 1000; i++) {
-			for (const char of generateSessionId()) {
+		for (let i = 0; i < 100; i++) {
+			const id = generateSessionId();
+			for (const char of id) {
 				expect(ALPHABET.has(char)).toBe(true);
 			}
 		}

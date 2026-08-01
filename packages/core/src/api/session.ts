@@ -211,9 +211,10 @@ export class SessionAPI<
 
 		let lastVerifiedAt = dbSession.lastVerifiedAt;
 		if (this.activityCheckInterval.elapsedSince(dbSession.lastVerifiedAt, now)) {
-			const result = await this.adapter.updateSessionbyId(dbSession.id, { lastVerifiedAt: now });
-			// The refresh is a best-effort write: if it fails, the session
-			// stays valid and keeps its previous lastVerifiedAt.
+			// The refresh is a best-effort write: whether the adapter returns
+			// an error or throws, the session stays valid and keeps its
+			// previous lastVerifiedAt.
+			const result = await this.adapter.updateSessionbyId(dbSession.id, { lastVerifiedAt: now }).catch((err) => new UnexpectedError(err));
 			if (!(result instanceof Error)) {
 				lastVerifiedAt = now;
 			}
@@ -328,9 +329,9 @@ export class SessionAPI<
 	private async checkSessionExpiry(session: DatabaseSession<Select>, now: Date): Promise<DatabaseSession<Select> | null> {
 		if (this.inactivityTimeout.elapsedSince(session.lastVerifiedAt, now)) {
 			// Best-effort cleanup: the session is expired regardless of
-			// whether the deletion write succeeds, so failures are ignored
-			// and the row is retried on the next validation.
-			await this.adapter.deleteSessionById(session.id);
+			// whether the deletion write succeeds or throws, so failures are
+			// ignored and the row is retried on the next validation.
+			await this.adapter.deleteSessionById(session.id).catch((_err) => {});
 			return null;
 		}
 		return session;
