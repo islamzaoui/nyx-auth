@@ -1,21 +1,23 @@
 import { Nyx } from "@nyx-auth/core";
 import { DrizzleAdapter } from "@nyx-auth/drizzle-adapter";
-import { db } from "./db";
-import { sessions, users } from "./db/schema";
+import { db } from "@/lib/db";
+import { sessions, users } from "@/lib/db/schema";
 
 export const nyx = new Nyx({
 	adapter: DrizzleAdapter.sqlite({ db, tables: { sessions, users } }),
 	user: {
 		// Never expose the password hash to the application layer
 		mapUserAttributes: (attributes) => ({
+			name: attributes.name,
 			email: attributes.email,
 			createdAt: attributes.createdAt,
+			updatedAt: attributes.updatedAt,
 		}),
 	},
 	session: {
 		mapSessionAttributes: (attributes) => ({
 			ipAddress: attributes.ipAddress,
-			name: attributes.name,
+			userAgent: attributes.userAgent,
 		}),
 	},
 });

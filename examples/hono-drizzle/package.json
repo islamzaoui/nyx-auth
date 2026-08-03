@@ -4,17 +4,24 @@
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
 		"typecheck": "tsc --noEmit",
-		"generate": "drizzle-kit generate"
+		"docs": "bunx @rcmade/hono-docs generate --config ./hono-docs.ts"
 	},
 	"dependencies": {
+		"@hono/zod-validator": "0.9.0",
 		"@libsql/client": "0.17.4",
 		"@nyx-auth/core": "workspace:*",
 		"@nyx-auth/drizzle-adapter": "workspace:*",
+		"@scalar/hono-api-reference": "0.11.12",
 		"drizzle-orm": "catalog:",
-		"hono": "4.12.31"
+		"errore": "0.14.1",
+		"hono": "4.12.31",
+		"hono-pino": "0.10.3",
+		"pino": "10.3.1",
+		"zod": "4.4.3"
 	},
 	"devDependencies": {
 		"@nyx-auth/tsconfig": "workspace:*",
+		"@rcmade/hono-docs": "1.2.3",
 		"@types/bun": "catalog:",
 		"drizzle-kit": "catalog:",
 		"typescript": "catalog:"

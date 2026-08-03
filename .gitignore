@@ -5,6 +5,7 @@ node_modules
 out
 dist
 .turbo
+generated
 *.tgz
 
 # code coverage
