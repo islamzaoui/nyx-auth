@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { getConnInfo } from "hono/bun";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { nyx } from "./nyx";
@@ -11,142 +11,147 @@ const MAX_PASSWORD_LENGTH = 72;
 // real hashing, keeping the login timing path equal for unknown emails.
 const DUMMY_PASSWORD_HASH = await Bun.password.hash(crypto.randomUUID());
 
-const app = new Hono();
-
-app.get("/", (c) => {
-	return c.text("Hello Hono!");
-});
-
-app.post("/register", async (c) => {
-	const body = await c.req.json<{ name?: string; email?: string; password?: string }>();
-	const name = body.name?.trim();
-	const email = body.email?.trim().toLowerCase();
-	const password = body.password;
-
-	if (!email || !password) {
-		return c.json({ error: "email and password are required" }, 400);
+// getConnInfo relies on a live Bun server via `c.env.server`, which is absent
+// when requests go through `app.request` (e.g. hono's `testClient`).
+function requestIpAddress(c: Context): string {
+	const env = c.env;
+	if (!env || !("server" in env)) {
+		return "unknown";
 	}
-	if (!email.includes("@")) {
-		return c.json({ error: "invalid email" }, 400);
-	}
-	if (password.length < 8) {
-		return c.json({ error: "password must be at least 8 characters" }, 400);
-	}
-	if (password.length > MAX_PASSWORD_LENGTH) {
-		return c.json({ error: "password must be at most 72 characters" }, 400);
-	}
+	return getConnInfo(c).remote.address ?? "unknown";
+}
 
-	const existing = await findUserByEmail(email);
-	if (existing) {
-		return c.json({ error: "an account with this email already exists" }, 409);
-	}
+const app = new Hono()
+	.get("/", (c) => {
+		return c.text("Hello Hono!");
+	})
+	.post("/register", async (c) => {
+		const body = await c.req.json<{ name?: string; email?: string; password?: string }>();
+		const name = body.name?.trim() || undefined;
+		const email = body.email?.trim().toLowerCase();
+		const password = body.password;
 
-	const passwordHash = await Bun.password.hash(password);
+		if (!email || !password) {
+			return c.json({ error: "email and password are required" }, 400);
+		}
+		if (!email.includes("@")) {
+			return c.json({ error: "invalid email" }, 400);
+		}
+		if (password.length < 8) {
+			return c.json({ error: "password must be at least 8 characters" }, 400);
+		}
+		if (password.length > MAX_PASSWORD_LENGTH) {
+			return c.json({ error: "password must be at most 72 characters" }, 400);
+		}
 
-	const userResult = await nyx.user.create({ name, email, passwordHash, createdAt: new Date().toISOString() });
-	if (userResult instanceof Error) {
-		console.error("Failed to create user:", userResult);
-		return c.json({ error: "failed to create user" }, 500);
-	}
+		const existing = await findUserByEmail(email);
+		if (existing) {
+			return c.json({ error: "an account with this email already exists" }, 409);
+		}
 
-	const result = await nyx.session.create(userResult.id, {
-		ipAddress: getConnInfo(c).remote.address ?? "unknown",
-		userAgent: c.req.header("user-agent") ?? "unknown",
-	});
-	if (result instanceof Error) {
-		console.error("Failed to create session:", result);
-		return c.json({ error: "failed to create session" }, 500);
-	}
+		const passwordHash = await Bun.password.hash(password);
 
-	setCookie(c, SESSION_COOKIE, result.token, {
-		httpOnly: true,
-		secure: true,
-		sameSite: "Lax",
-		path: "/",
-	});
+		const userResult = await nyx.user.create({ name, email, passwordHash, createdAt: new Date().toISOString() });
+		if (userResult instanceof Error) {
+			console.error("Failed to create user:", userResult);
+			return c.json({ error: "failed to create user" }, 500);
+		}
 
-	return c.json({ message: "registered successfully", user: userResult, session: result.value }, 200);
-});
+		const result = await nyx.session.create(userResult.id, {
+			ipAddress: requestIpAddress(c),
+			userAgent: c.req.header("user-agent") ?? "unknown",
+		});
+		if (result instanceof Error) {
+			console.error("Failed to create session:", result);
+			return c.json({ error: "failed to create session" }, 500);
+		}
 
-app.post("/login", async (c) => {
-	const body = await c.req.json<{ email?: string; password?: string }>();
-	const email = body.email?.trim().toLowerCase();
-	const password = body.password;
+		setCookie(c, SESSION_COOKIE, result.token, {
+			httpOnly: true,
+			secure: true,
+			sameSite: "Lax",
+			path: "/",
+		});
 
-	if (!email || !password) {
-		return c.json({ error: "email and password are required" }, 400);
-	}
-	if (password.length > MAX_PASSWORD_LENGTH) {
-		return c.json({ error: "password must be at most 72 characters" }, 400);
-	}
+		return c.json({ message: "registered successfully", user: userResult, session: result.value }, 200);
+	})
+	.post("/login", async (c) => {
+		const body = await c.req.json<{ email?: string; password?: string }>();
+		const email = body.email?.trim().toLowerCase();
+		const password = body.password;
 
-	const user = await findUserByEmail(email);
+		if (!email || !password) {
+			return c.json({ error: "email and password are required" }, 400);
+		}
+		if (password.length > MAX_PASSWORD_LENGTH) {
+			return c.json({ error: "password must be at most 72 characters" }, 400);
+		}
 
-	const validPassword = await Bun.password.verify(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
-	if (!user || !validPassword) {
-		return c.json({ error: "invalid email or password" }, 401);
-	}
+		const user = await findUserByEmail(email);
 
-	const result = await nyx.session.create(user.id, {
-		ipAddress: getConnInfo(c).remote.address ?? "unknown",
-		userAgent: c.req.header("user-agent") ?? "unknown",
-	});
-	if (result instanceof Error) {
-		console.error("Failed to create session:", result);
-		return c.json({ error: "failed to create session" }, 500);
-	}
+		const validPassword = await Bun.password.verify(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH);
+		if (!user || !validPassword) {
+			return c.json({ error: "invalid email or password" }, 401);
+		}
 
-	setCookie(c, SESSION_COOKIE, result.token, {
-		httpOnly: true,
-		secure: true,
-		sameSite: "Lax",
-		path: "/",
-	});
+		const result = await nyx.session.create(user.id, {
+			ipAddress: requestIpAddress(c),
+			userAgent: c.req.header("user-agent") ?? "unknown",
+		});
+		if (result instanceof Error) {
+			console.error("Failed to create session:", result);
+			return c.json({ error: "failed to create session" }, 500);
+		}
 
-	// Fetch the public shape (password hash stripped) for the response
-	const publicUser = await nyx.user.get(user.id);
-	if (publicUser instanceof Error) {
-		console.error("Failed to fetch user:", publicUser);
-		return c.json({ error: "failed to fetch user" }, 500);
-	}
+		setCookie(c, SESSION_COOKIE, result.token, {
+			httpOnly: true,
+			secure: true,
+			sameSite: "Lax",
+			path: "/",
+		});
 
-	return c.json({ message: "logged in successfully", user: publicUser, session: result.value }, 200);
-});
+		// Fetch the public shape (password hash stripped) for the response
+		const publicUser = await nyx.user.get(user.id);
+		if (publicUser instanceof Error) {
+			console.error("Failed to fetch user:", publicUser);
+			return c.json({ error: "failed to fetch user" }, 500);
+		}
 
-app.post("/logout", async (c) => {
-	const token = getCookie(c, SESSION_COOKIE);
-	if (token) {
-		const result = await nyx.session.validateToken(token);
-		if (result && !(result instanceof Error)) {
-			const deleted = await nyx.session.invalidate(result.session.id);
-			if (!deleted) {
-				console.warn("Session was already gone:", result.session.id);
+		return c.json({ message: "logged in successfully", user: publicUser, session: result.value }, 200);
+	})
+	.post("/logout", async (c) => {
+		const token = getCookie(c, SESSION_COOKIE);
+		if (token) {
+			const result = await nyx.session.validateToken(token);
+			if (result && !(result instanceof Error)) {
+				const deleted = await nyx.session.invalidate(result.session.id);
+				if (!deleted) {
+					console.warn("Session was already gone:", result.session.id);
+				}
 			}
 		}
-	}
-	deleteCookie(c, SESSION_COOKIE, { path: "/" });
-	return c.json({ message: "logged out" });
-});
-
-app.get("/me", async (c) => {
-	const token = getCookie(c, SESSION_COOKIE);
-	if (!token) {
-		return c.json({ error: "not authenticated" }, 401);
-	}
-
-	const result = await nyx.session.validateToken(token);
-	if (result instanceof Error) {
-		console.error("Failed to validate session:", result);
-		return c.json({ error: "something went wrong" }, 500);
-	}
-	if (!result) {
 		deleteCookie(c, SESSION_COOKIE, { path: "/" });
-		return c.json({ error: "not authenticated" }, 401);
-	}
+		return c.json({ message: "logged out" });
+	})
+	.get("/me", async (c) => {
+		const token = getCookie(c, SESSION_COOKIE);
+		if (!token) {
+			return c.json({ error: "not authenticated" }, 401);
+		}
 
-	const { session, user } = result;
+		const result = await nyx.session.validateToken(token);
+		if (result instanceof Error) {
+			console.error("Failed to validate session:", result);
+			return c.json({ error: "something went wrong" }, 500);
+		}
+		if (!result) {
+			deleteCookie(c, SESSION_COOKIE, { path: "/" });
+			return c.json({ error: "not authenticated" }, 401);
+		}
 
-	return c.json({ message: "user info retrieved successfully", user, session });
-});
+		const { session, user } = result;
+
+		return c.json({ message: "user info retrieved successfully", user, session });
+	});
 
 export default app;

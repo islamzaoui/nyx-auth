@@ -16,6 +16,7 @@ export const nyx = new Nyx({
 	session: {
 		mapSessionAttributes: (attributes) => ({
 			ipAddress: attributes.ipAddress,
+			userAgent: attributes.userAgent,
 		}),
 	},
 });
