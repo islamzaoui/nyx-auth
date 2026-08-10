@@ -9,6 +9,8 @@ const db = drizzle({ client });
 
 // drizzle-kit v1 dropped the programmatic SQLite schema push API, so the
 // in-memory schema is created directly from the DDL below.
+// SQLite disables foreign-key enforcement per connection by default.
+await db.$client.execute("PRAGMA foreign_keys = ON");
 // WARNING: this DDL deliberately mirrors `schema.ts` — keep it in sync, or
 // inserts against a non-`:memory:` database fail with "no such column".
 await db.$client.executeMultiple(`
