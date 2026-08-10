@@ -1,3 +1,12 @@
+## @nyx-auth/drizzle-adapter@0.3.0
+
+### Upgrade to drizzle-orm v1 Release Candidate
+
+- Pinned `drizzle-orm` and `drizzle-kit` to the exact `1.0.0-rc.4` release in the workspace catalog for both the adapter and the hono-drizzle example
+- Adapted to the v1 type renames: `PgAsyncDatabase`, `MySqlAsyncDatabase`, and `SQLiteAsyncDatabase` in the `DrizzleAdapterConfig` unions and driver factories
+- Updated the `PgColumn`, `MySqlColumn`, and `SQLiteColumn` config shapes used by `AttributeColumn`, `BaseColumns`, and `UserBaseColumns` for the new v1 column config (dropped `columnType`/`baseColumn`, added `identity`)
+- Removed the example's `pushSQLiteSchema` setup (dropped in v1) in favor of inline DDL through `db.$client.executeMultiple`
+
 ## @nyx-auth/drizzle-adapter@0.2.0
 
 ### Follow the updated core adapter contract
