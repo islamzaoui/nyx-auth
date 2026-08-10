@@ -51,31 +51,12 @@ type BaseColumnNames = "id" | "userId" | "secretHash" | "createdAt" | "lastVerif
 
 type UserBaseColumnNames = "id";
 
-type InferTableSelect<T, Base extends string> = T extends { _: { columns: infer Cols } }
-	? { [K in keyof Cols as K extends Base ? never : K]: Cols[K] extends { _: { data: infer D } } ? D : never }
+type InferTableSelect<T, Base extends string> = T extends { $inferSelect: infer Select }
+	? { [K in keyof Select as K extends Base ? never : K]: Select[K] }
 	: Record<string, never>;
 
-// biome-ignore lint/complexity/noBannedTypes: standard pattern to detect optional properties
-type IsOptional<T, K extends keyof T> = {} extends Pick<T, K> ? true : false;
-
-type InferTableInsert<T, Base extends string> = T extends { _: { columns: infer Cols }; $inferInsert: infer Insert }
-	? {
-			[K in keyof Cols as K extends Base
-				? never
-				: K extends keyof Insert
-					? IsOptional<Insert, K> extends true
-						? never
-						: K
-					: never]: K extends keyof Insert ? Insert[K] : never;
-		} & {
-			[K in keyof Cols as K extends Base
-				? never
-				: K extends keyof Insert
-					? IsOptional<Insert, K> extends true
-						? K
-						: never
-					: never]?: K extends keyof Insert ? Insert[K] : never;
-		}
+type InferTableInsert<T, Base extends string> = T extends { $inferInsert: infer Insert }
+	? { [K in keyof Insert as K extends Base ? never : K]: Insert[K] }
 	: Record<string, never>;
 
 type InferTableAttributes<T> = Attributes<InferTableSelect<T, BaseColumnNames>, InferTableInsert<T, BaseColumnNames>>;

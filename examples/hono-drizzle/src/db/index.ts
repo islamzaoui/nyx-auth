@@ -16,6 +16,7 @@ await db.$client.execute("PRAGMA foreign_keys = ON");
 await db.$client.executeMultiple(`
 	CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY,
+		name TEXT,
 		email TEXT NOT NULL UNIQUE,
 		password_hash TEXT NOT NULL,
 		created_at TEXT NOT NULL
@@ -28,7 +29,7 @@ await db.$client.executeMultiple(`
 		created_at INTEGER NOT NULL,
 		last_verified_at INTEGER NOT NULL,
 		ip_address TEXT NOT NULL,
-		name TEXT NOT NULL DEFAULT 'Unknown'
+		user_agent TEXT NOT NULL
 	);
 
 	CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id);
