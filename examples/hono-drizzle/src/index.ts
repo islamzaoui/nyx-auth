@@ -18,7 +18,8 @@ app.get("/", (c) => {
 });
 
 app.post("/register", async (c) => {
-	const body = await c.req.json<{ email?: string; password?: string }>();
+	const body = await c.req.json<{ name?: string; email?: string; password?: string }>();
+	const name = body.name?.trim();
 	const email = body.email?.trim().toLowerCase();
 	const password = body.password;
 
@@ -42,13 +43,16 @@ app.post("/register", async (c) => {
 
 	const passwordHash = await Bun.password.hash(password);
 
-	const userResult = await nyx.user.create({ email, passwordHash, createdAt: new Date().toISOString() });
+	const userResult = await nyx.user.create({ name, email, passwordHash, createdAt: new Date().toISOString() });
 	if (userResult instanceof Error) {
 		console.error("Failed to create user:", userResult);
 		return c.json({ error: "failed to create user" }, 500);
 	}
 
-	const result = await nyx.session.create(userResult.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const result = await nyx.session.create(userResult.id, {
+		ipAddress: getConnInfo(c).remote.address ?? "unknown",
+		userAgent: c.req.header("user-agent") ?? "unknown",
+	});
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);
@@ -83,7 +87,10 @@ app.post("/login", async (c) => {
 		return c.json({ error: "invalid email or password" }, 401);
 	}
 
-	const result = await nyx.session.create(user.id, { ipAddress: getConnInfo(c).remote.address ?? "unknown" });
+	const result = await nyx.session.create(user.id, {
+		ipAddress: getConnInfo(c).remote.address ?? "unknown",
+		userAgent: c.req.header("user-agent") ?? "unknown",
+	});
 	if (result instanceof Error) {
 		console.error("Failed to create session:", result);
 		return c.json({ error: "failed to create session" }, 500);

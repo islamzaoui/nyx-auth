@@ -4,6 +4,8 @@ export const users = sqliteTable("users", {
 	id: text("id")
 		.primaryKey()
 		.$default(() => crypto.randomUUID()),
+	// Additional user attributes
+	name: text("name"),
 	email: text("email").notNull().unique(),
 	passwordHash: text("password_hash").notNull(),
 	createdAt: text("created_at")
@@ -23,7 +25,7 @@ export const sessions = sqliteTable(
 		lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }).notNull(),
 		// Additional session attributes
 		ipAddress: text("ip_address").notNull(),
-		name: text("name").notNull().default("Unknown"),
+		userAgent: text("user_agent").notNull(),
 	},
 	(t) => [index("sessions_user_id_idx").on(t.userId), index("sessions_last_verified_at_idx").on(t.lastVerifiedAt)]
 );

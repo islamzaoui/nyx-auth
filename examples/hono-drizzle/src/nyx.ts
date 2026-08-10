@@ -8,6 +8,7 @@ export const nyx = new Nyx({
 	user: {
 		// Never expose the password hash to the application layer
 		mapUserAttributes: (attributes) => ({
+			name: attributes.name,
 			email: attributes.email,
 			createdAt: attributes.createdAt,
 		}),
@@ -15,7 +16,6 @@ export const nyx = new Nyx({
 	session: {
 		mapSessionAttributes: (attributes) => ({
 			ipAddress: attributes.ipAddress,
-			name: attributes.name,
 		}),
 	},
 });
