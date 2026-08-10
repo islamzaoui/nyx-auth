@@ -5,8 +5,13 @@ Drizzle ORM adapter for [@nyx-auth/core](https://github.com/islamzaoui/nyx-auth/
 ## Installation
 
 ```bash
-bun add @nyx-auth/drizzle-adapter @nyx-auth/core drizzle-orm
+bun add @nyx-auth/drizzle-adapter @nyx-auth/core "drizzle-orm@1.0.0-rc.4"
 ```
+
+> [!IMPORTANT]
+> The adapter targets the drizzle-orm **v1** API, which is currently in release
+> candidate. Pin the exact `1.0.0-rc.x` version you install — RC releases can
+> change type signatures between patches. Do not use the v0.x line.
 
 ## Usage
 

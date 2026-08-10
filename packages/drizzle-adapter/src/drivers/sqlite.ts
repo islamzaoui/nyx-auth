@@ -1,11 +1,10 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
 import { eq, getTableName, lte } from "drizzle-orm";
-import type { BaseSQLiteDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
+import type { SQLiteAsyncDatabase, SQLiteColumn, SQLiteTableWithColumns } from "drizzle-orm/sqlite-core";
 import { isSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
 type AttributeColumn<T> = SQLiteColumn<{
 	dataType: any;
-	columnType: any;
 	notNull: boolean;
 	hasDefault: boolean;
 	data: T;
@@ -13,17 +12,16 @@ type AttributeColumn<T> = SQLiteColumn<{
 	name: any;
 	tableName: any;
 	enumValues: any;
-	baseColumn: any;
 	isPrimaryKey: boolean;
 	isAutoincrement: boolean;
 	hasRuntimeDefault: boolean;
 	generated: any;
+	identity: any;
 }>;
 
 type BaseColumns = {
 	id: SQLiteColumn<{
 		dataType: any;
-		columnType: any;
 		notNull: true;
 		hasDefault: boolean;
 		data: string;
@@ -31,15 +29,14 @@ type BaseColumns = {
 		name: any;
 		tableName: any;
 		enumValues: any;
-		baseColumn: any;
 		isPrimaryKey: any;
 		isAutoincrement: any;
 		hasRuntimeDefault: any;
 		generated: any;
+		identity: any;
 	}>;
 	userId: SQLiteColumn<{
 		dataType: any;
-		columnType: any;
 		notNull: true;
 		hasDefault: boolean;
 		data: string;
@@ -47,15 +44,14 @@ type BaseColumns = {
 		name: any;
 		tableName: any;
 		enumValues: any;
-		baseColumn: any;
 		isPrimaryKey: any;
 		isAutoincrement: any;
 		hasRuntimeDefault: any;
 		generated: any;
+		identity: any;
 	}>;
 	secretHash: SQLiteColumn<{
 		dataType: any;
-		columnType: any;
 		notNull: true;
 		hasDefault: boolean;
 		data: Uint8Array;
@@ -63,15 +59,14 @@ type BaseColumns = {
 		name: any;
 		tableName: any;
 		enumValues: any;
-		baseColumn: any;
 		isPrimaryKey: any;
 		isAutoincrement: any;
 		hasRuntimeDefault: any;
 		generated: any;
+		identity: any;
 	}>;
 	createdAt: SQLiteColumn<{
 		dataType: any;
-		columnType: any;
 		notNull: true;
 		hasDefault: boolean;
 		data: Date;
@@ -79,15 +74,14 @@ type BaseColumns = {
 		name: any;
 		tableName: any;
 		enumValues: any;
-		baseColumn: any;
 		isPrimaryKey: any;
 		isAutoincrement: any;
 		hasRuntimeDefault: any;
 		generated: any;
+		identity: any;
 	}>;
 	lastVerifiedAt: SQLiteColumn<{
 		dataType: any;
-		columnType: any;
 		notNull: true;
 		hasDefault: boolean;
 		data: Date;
@@ -95,18 +89,17 @@ type BaseColumns = {
 		name: any;
 		tableName: any;
 		enumValues: any;
-		baseColumn: any;
 		isPrimaryKey: any;
 		isAutoincrement: any;
 		hasRuntimeDefault: any;
 		generated: any;
+		identity: any;
 	}>;
 };
 
 type UserBaseColumns = {
 	id: SQLiteColumn<{
 		dataType: any;
-		columnType: any;
 		notNull: true;
 		hasDefault: boolean;
 		data: string;
@@ -114,11 +107,11 @@ type UserBaseColumns = {
 		name: any;
 		tableName: any;
 		enumValues: any;
-		baseColumn: any;
 		isPrimaryKey: any;
 		isAutoincrement: any;
 		hasRuntimeDefault: any;
 		generated: any;
+		identity: any;
 	}>;
 };
 
@@ -154,7 +147,7 @@ export type SQLiteUserTable<A extends Record<string, any> = Record<never, never>
 }>;
 
 export function createSQLiteAdapter<A extends Attributes, UA extends Attributes>(
-	db: BaseSQLiteDatabase<"async" | "sync", any>,
+	db: SQLiteAsyncDatabase<any, any, any>,
 	sessionTable: SQLiteSessionTable,
 	userTable: SQLiteUserTable
 ): Adapter<A, UA> {
@@ -162,11 +155,11 @@ export function createSQLiteAdapter<A extends Attributes, UA extends Attributes>
 }
 
 class SQLiteCoreAdapter<A extends Attributes, UA extends Attributes> implements Adapter<A, UA> {
-	private db: BaseSQLiteDatabase<"async" | "sync", any>;
+	private db: SQLiteAsyncDatabase<any, any, any>;
 	private sessionTable: SQLiteSessionTable;
 	private userTable: SQLiteUserTable;
 
-	constructor(db: BaseSQLiteDatabase<"async" | "sync", any>, sessionTable: SQLiteSessionTable, userTable: SQLiteUserTable) {
+	constructor(db: SQLiteAsyncDatabase<any, any, any>, sessionTable: SQLiteSessionTable, userTable: SQLiteUserTable) {
 		this.db = db;
 		this.sessionTable = sessionTable;
 		this.userTable = userTable;

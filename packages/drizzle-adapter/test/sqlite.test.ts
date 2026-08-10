@@ -40,7 +40,7 @@ function createAdapter() {
 		ipAddress: text("ip_address"),
 	});
 
-	const adapter = DrizzleAdapter.sqlite({ db: drizzle(sqlite), tables: { sessions, users } });
+	const adapter = DrizzleAdapter.sqlite({ db: drizzle({ client: sqlite }), tables: { sessions, users } });
 	return { adapter, sqlite };
 }
 
@@ -98,7 +98,7 @@ describe("DrizzleAdapter sqlite", () => {
 			lastVerifiedAt: integer("last_verified_at", { mode: "timestamp" }).notNull(),
 		});
 
-		const adapter = DrizzleAdapter.sqlite({ db: drizzle(sqlite), tables: { sessions: orphanSessions, users } });
+		const adapter = DrizzleAdapter.sqlite({ db: drizzle({ client: sqlite }), tables: { sessions: orphanSessions, users } });
 		const inserted = await adapter.insertSession({
 			id: "orphan",
 			userId: "missing-user",
@@ -208,7 +208,7 @@ describe("DrizzleAdapter sqlite", () => {
 
 		const adapter = new DrizzleAdapter({
 			dialect: "sqlite",
-			db: drizzle(sqlite),
+			db: drizzle({ client: sqlite }),
 			tables: { sessions: badSessions as never, users: users as never },
 		} as never);
 
