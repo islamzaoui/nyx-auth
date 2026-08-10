@@ -1,23 +1,23 @@
 core:changelogs:
-  - content: "---\npackages:\n  npm:@nyx-auth/drizzle-adapter:\n    type: minor\n---\n\n## Upgrade to drizzle-orm v1 Release Candidate\n\n- Pinned `drizzle-orm` and `drizzle-kit` to the exact `1.0.0-rc.4` release in the workspace catalog for both the adapter and the hono-drizzle example\n- Adapted to the v1 type renames: `PgAsyncDatabase`, `MySqlAsyncDatabase`, and `SQLiteAsyncDatabase` in the `DrizzleAdapterConfig` unions and driver factories\n- Updated the `PgColumn`, `MySqlColumn`, and `SQLiteColumn` config shapes used by `AttributeColumn`, `BaseColumns`, and `UserBaseColumns` for the new v1 column config (dropped `columnType`/`baseColumn`, added `identity`)\n- Removed the example's `pushSQLiteSchema` setup (dropped in v1) in favor of inline DDL through `db.$client.executeMultiple`\n"
-    filename: 2026-08-10-0be88098.md
+  - content: "---\npackages:\n  npm:@nyx-auth/drizzle-adapter:\n    type: patch\n---\n\n### Fixed attribute nullability inference\n\n- Fixed `select` attribute inference to use the table's `$inferSelect`, so nullable columns resolve to `T | null` instead of `T`\n- Replaced hand-rolled `insert` attribute inference with the table's `$inferInsert`, preserving required vs optional fields (including columns with defaults or `$default` runtime defaults)\n"
+    filename: 2026-08-10-fix-nullable-attr-inference.md
     v: 0.0.0
 core:packages:
   - id: npm:nyx-auth
     updated: false
-  - id: npm:@nyx-auth/tsconfig
-    updated: false
   - id: npm:hono-bun
     updated: false
+  - id: npm:@nyx-auth/tsconfig
+    updated: false
   - changelogIds:
-      - 2026-08-10-0be88098.md
+      - 2026-08-10-fix-nullable-attr-inference.md
     id: npm:@nyx-auth/drizzle-adapter
     updated: true
   - id: npm:@nyx-auth/core
     updated: false
 npm:packages:
   - id: npm:nyx-auth
-  - id: npm:@nyx-auth/tsconfig
   - id: npm:hono-bun
+  - id: npm:@nyx-auth/tsconfig
   - id: npm:@nyx-auth/drizzle-adapter
   - id: npm:@nyx-auth/core

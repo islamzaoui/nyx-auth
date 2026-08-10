@@ -1,3 +1,10 @@
+## @nyx-auth/drizzle-adapter@0.3.1
+
+### Fixed attribute nullability inference
+
+- Fixed `select` attribute inference to use the table's `$inferSelect`, so nullable columns resolve to `T | null` instead of `T`
+- Replaced hand-rolled `insert` attribute inference with the table's `$inferInsert`, preserving required vs optional fields (including columns with defaults or `$default` runtime defaults)
+
 ## @nyx-auth/drizzle-adapter@0.3.0
 
 ### Upgrade to drizzle-orm v1 Release Candidate
