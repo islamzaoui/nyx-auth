@@ -8,7 +8,9 @@ const client = createClient({
 const db = drizzle({ client });
 
 // drizzle-kit v1 dropped the programmatic SQLite schema push API, so the
-// in-memory schema is created directly from the DDL mirroring `schema.ts`.
+// in-memory schema is created directly from the DDL below.
+// WARNING: this DDL deliberately mirrors `schema.ts` — keep it in sync, or
+// inserts against a non-`:memory:` database fail with "no such column".
 await db.$client.executeMultiple(`
 	CREATE TABLE IF NOT EXISTS users (
 		id TEXT PRIMARY KEY,
