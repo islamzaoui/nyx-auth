@@ -1,125 +1,146 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
 import { eq, getTableName, lte } from "drizzle-orm";
-import type { PgColumn, PgDatabase, PgTableWithColumns } from "drizzle-orm/pg-core";
+import type { PgAsyncDatabase, PgColumn, PgTableWithColumns } from "drizzle-orm/pg-core";
 import { isSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
-type AttributeColumn<T> = PgColumn<{
-	dataType: any;
-	columnType: any;
-	notNull: boolean;
-	hasDefault: boolean;
-	data: T;
-	driverParam: any;
-	name: any;
-	tableName: any;
-	enumValues: any;
-	baseColumn: any;
-	isPrimaryKey: boolean;
-	isAutoincrement: boolean;
-	hasRuntimeDefault: boolean;
-	generated: any;
-}>;
+type AttributeColumn<T> = PgColumn<
+	any,
+	{
+		dataType: any;
+		notNull: boolean;
+		hasDefault: boolean;
+		data: T;
+		driverParam: any;
+		name: any;
+		tableName: any;
+		enumValues: any;
+		isPrimaryKey: boolean;
+		isAutoincrement: boolean;
+		hasRuntimeDefault: boolean;
+		generated: any;
+		identity: any;
+	},
+	any
+>;
 
 type BaseColumns = {
-	id: PgColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: string;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	userId: PgColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: string;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	secretHash: PgColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: Uint8Array;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	createdAt: PgColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: Date;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	lastVerifiedAt: PgColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: Date;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
+	id: PgColumn<
+		any,
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: string;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	userId: PgColumn<
+		any,
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: string;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	secretHash: PgColumn<
+		any,
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: Uint8Array;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	createdAt: PgColumn<
+		any,
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: Date;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	lastVerifiedAt: PgColumn<
+		any,
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: Date;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
 };
 
 type UserBaseColumns = {
-	id: PgColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: string;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
+	id: PgColumn<
+		any,
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: string;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
 };
 
 /**
@@ -154,7 +175,7 @@ export type PgUserTable<A extends Record<string, any> = Record<never, never>> = 
 }>;
 
 export function createPostgresAdapter<A extends Attributes, UA extends Attributes>(
-	db: PgDatabase<any, any, any>,
+	db: PgAsyncDatabase<any, any>,
 	sessionTable: PgSessionTable,
 	userTable: PgUserTable
 ): Adapter<A, UA> {
@@ -162,11 +183,11 @@ export function createPostgresAdapter<A extends Attributes, UA extends Attribute
 }
 
 class PostgresCoreAdapter<A extends Attributes, UA extends Attributes> implements Adapter<A, UA> {
-	private db: PgDatabase<any, any, any>;
+	private db: PgAsyncDatabase<any, any>;
 	private sessionTable: PgSessionTable;
 	private userTable: PgUserTable;
 
-	constructor(db: PgDatabase<any, any, any>, sessionTable: PgSessionTable, userTable: PgUserTable) {
+	constructor(db: PgAsyncDatabase<any, any>, sessionTable: PgSessionTable, userTable: PgUserTable) {
 		this.db = db;
 		this.sessionTable = sessionTable;
 		this.userTable = userTable;

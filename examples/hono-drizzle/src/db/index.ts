@@ -1,18 +1,34 @@
 import { createClient } from "@libsql/client/sqlite3";
-import { pushSQLiteSchema } from "drizzle-kit/api";
-import { drizzle } from "drizzle-orm/libsql";
-import * as schema from "./schema";
+import { drizzle } from "drizzle-orm/libsql/sqlite3";
 
 const client = createClient({
 	url: ":memory:",
 });
 
-const db = drizzle({
-	client,
-	schema,
-});
+const db = drizzle({ client });
 
-const { apply } = await pushSQLiteSchema(schema, db);
-await apply();
+// drizzle-kit v1 dropped the programmatic SQLite schema push API, so the
+// in-memory schema is created directly from the DDL mirroring `schema.ts`.
+await db.$client.executeMultiple(`
+	CREATE TABLE IF NOT EXISTS users (
+		id TEXT PRIMARY KEY,
+		email TEXT NOT NULL UNIQUE,
+		password_hash TEXT NOT NULL,
+		created_at TEXT NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS sessions (
+		id TEXT PRIMARY KEY,
+		user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+		secret_hash BLOB NOT NULL,
+		created_at INTEGER NOT NULL,
+		last_verified_at INTEGER NOT NULL,
+		ip_address TEXT NOT NULL,
+		name TEXT NOT NULL DEFAULT 'Unknown'
+	);
+
+	CREATE INDEX IF NOT EXISTS sessions_user_id_idx ON sessions (user_id);
+	CREATE INDEX IF NOT EXISTS sessions_last_verified_at_idx ON sessions (last_verified_at);
+`);
 
 export { db };

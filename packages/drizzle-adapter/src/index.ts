@@ -38,9 +38,9 @@
  */
 import type { Adapter, AdapterError, Attributes, DatabaseSession, DatabaseUser } from "@nyx-auth/core";
 import { getTableName } from "drizzle-orm";
-import type { MySqlDatabase } from "drizzle-orm/mysql-core";
-import type { PgDatabase } from "drizzle-orm/pg-core";
-import type { BaseSQLiteDatabase } from "drizzle-orm/sqlite-core";
+import type { MySqlAsyncDatabase } from "drizzle-orm/mysql-core";
+import type { PgAsyncDatabase } from "drizzle-orm/pg-core";
+import type { SQLiteAsyncDatabase } from "drizzle-orm/sqlite-core";
 import { createMySQLAdapter, type MySQLSessionTable, type MySQLUserTable } from "./drivers/mysql";
 import { createPostgresAdapter, type PgSessionTable, type PgUserTable } from "./drivers/postgresql";
 import { createSQLiteAdapter, type SQLiteSessionTable, type SQLiteUserTable } from "./drivers/sqlite";
@@ -84,17 +84,17 @@ type InferUserTableAttributes<T> = Attributes<InferTableSelect<T, UserBaseColumn
 type DrizzleAdapterConfig =
 	| {
 			dialect: "sqlite";
-			db: BaseSQLiteDatabase<"async" | "sync", any, any, any>;
+			db: SQLiteAsyncDatabase<any, any, any>;
 			tables: { sessions: SQLiteSessionTable; users: SQLiteUserTable };
 	  }
 	| {
 			dialect: "postgres";
-			db: PgDatabase<any, any, any>;
+			db: PgAsyncDatabase<any, any>;
 			tables: { sessions: PgSessionTable; users: PgUserTable };
 	  }
 	| {
 			dialect: "mysql";
-			db: MySqlDatabase<any, any, any>;
+			db: MySqlAsyncDatabase<any, any>;
 			tables: { sessions: MySQLSessionTable; users: MySQLUserTable };
 	  };
 
@@ -166,7 +166,7 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 	 * @returns A `DrizzleAdapter` typed to the tables' attributes.
 	 */
 	static sqlite<T extends SQLiteSessionTable, U extends SQLiteUserTable>(config: {
-		db: BaseSQLiteDatabase<"async" | "sync", any, any, any>;
+		db: SQLiteAsyncDatabase<any, any, any>;
 		tables: { sessions: T; users: U };
 	}): DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>> {
 		return new DrizzleAdapter({ dialect: "sqlite", ...config } as DrizzleAdapterConfig) as DrizzleAdapter<
@@ -195,7 +195,7 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 	 * @returns A `DrizzleAdapter` typed to the tables' attributes.
 	 */
 	static postgres<T extends PgSessionTable, U extends PgUserTable>(config: {
-		db: PgDatabase<any, any, any>;
+		db: PgAsyncDatabase<any, any>;
 		tables: { sessions: T; users: U };
 	}): DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>> {
 		return new DrizzleAdapter({ dialect: "postgres", ...config } as DrizzleAdapterConfig) as DrizzleAdapter<
@@ -224,7 +224,7 @@ export class DrizzleAdapter<A extends Attributes = Attributes, UA extends Attrib
 	 * @returns A `DrizzleAdapter` typed to the tables' attributes.
 	 */
 	static mysql<T extends MySQLSessionTable, U extends MySQLUserTable>(config: {
-		db: MySqlDatabase<any, any, any>;
+		db: MySqlAsyncDatabase<any, any>;
 		tables: { sessions: T; users: U };
 	}): DrizzleAdapter<InferTableAttributes<T>, InferUserTableAttributes<U>> {
 		return new DrizzleAdapter({ dialect: "mysql", ...config } as DrizzleAdapterConfig) as DrizzleAdapter<

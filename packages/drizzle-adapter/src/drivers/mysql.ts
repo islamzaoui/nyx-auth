@@ -1,125 +1,139 @@
 import { type Adapter, AdapterError, type Attributes, type DatabaseSession, type DatabaseUser } from "@nyx-auth/core";
 import { eq, getTableName, lte } from "drizzle-orm";
-import type { MySqlColumn, MySqlDatabase, MySqlTableWithColumns } from "drizzle-orm/mysql-core";
+import type { MySqlAsyncDatabase, MySqlColumn, MySqlTableWithColumns } from "drizzle-orm/mysql-core";
 import { isSecretHash, stripSessionReservedAttributes, stripUserReservedAttributes } from "./sanitize";
 
-type AttributeColumn<T> = MySqlColumn<{
-	dataType: any;
-	columnType: any;
-	notNull: boolean;
-	hasDefault: boolean;
-	data: T;
-	driverParam: any;
-	name: any;
-	tableName: any;
-	enumValues: any;
-	baseColumn: any;
-	isPrimaryKey: boolean;
-	isAutoincrement: boolean;
-	hasRuntimeDefault: boolean;
-	generated: any;
-}>;
+type AttributeColumn<T> = MySqlColumn<
+	{
+		dataType: any;
+		notNull: boolean;
+		hasDefault: boolean;
+		data: T;
+		driverParam: any;
+		name: any;
+		tableName: any;
+		enumValues: any;
+		isPrimaryKey: boolean;
+		isAutoincrement: boolean;
+		hasRuntimeDefault: boolean;
+		generated: any;
+		identity: any;
+	},
+	any
+>;
 
 type BaseColumns = {
-	id: MySqlColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: string;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	userId: MySqlColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: string;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	secretHash: MySqlColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: Uint8Array;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	createdAt: MySqlColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: Date;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
-	lastVerifiedAt: MySqlColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: Date;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
+	id: MySqlColumn<
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: string;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	userId: MySqlColumn<
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: string;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	secretHash: MySqlColumn<
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: Uint8Array;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	createdAt: MySqlColumn<
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: Date;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
+	lastVerifiedAt: MySqlColumn<
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: Date;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
 };
 
 type UserBaseColumns = {
-	id: MySqlColumn<{
-		dataType: any;
-		columnType: any;
-		notNull: true;
-		hasDefault: boolean;
-		data: string;
-		driverParam: any;
-		name: any;
-		tableName: any;
-		enumValues: any;
-		baseColumn: any;
-		isPrimaryKey: any;
-		isAutoincrement: any;
-		hasRuntimeDefault: any;
-		generated: any;
-	}>;
+	id: MySqlColumn<
+		{
+			dataType: any;
+			notNull: true;
+			hasDefault: boolean;
+			data: string;
+			driverParam: any;
+			name: any;
+			tableName: any;
+			enumValues: any;
+			isPrimaryKey: any;
+			isAutoincrement: any;
+			hasRuntimeDefault: any;
+			generated: any;
+			identity: any;
+		},
+		any
+	>;
 };
 
 /**
@@ -154,7 +168,7 @@ export type MySQLUserTable<A extends Record<string, any> = Record<never, never>>
 }>;
 
 export function createMySQLAdapter<A extends Attributes, UA extends Attributes>(
-	db: MySqlDatabase<any, any, any>,
+	db: MySqlAsyncDatabase<any, any>,
 	sessionTable: MySQLSessionTable,
 	userTable: MySQLUserTable
 ): Adapter<A, UA> {
@@ -162,11 +176,11 @@ export function createMySQLAdapter<A extends Attributes, UA extends Attributes>(
 }
 
 class MySQLCoreAdapter<A extends Attributes, UA extends Attributes> implements Adapter<A, UA> {
-	private db: MySqlDatabase<any, any, any>;
+	private db: MySqlAsyncDatabase<any, any>;
 	private sessionTable: MySQLSessionTable;
 	private userTable: MySQLUserTable;
 
-	constructor(db: MySqlDatabase<any, any, any>, sessionTable: MySQLSessionTable, userTable: MySQLUserTable) {
+	constructor(db: MySqlAsyncDatabase<any, any>, sessionTable: MySQLSessionTable, userTable: MySQLUserTable) {
 		this.db = db;
 		this.sessionTable = sessionTable;
 		this.userTable = userTable;
